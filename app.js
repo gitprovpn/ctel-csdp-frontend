@@ -1,142 +1,461 @@
-const apiBase = window.APP_CONFIG.apiBaseUrl.replace(/\/$/, '');
-const summaryCards = document.getElementById('summaryCards');
-const projectRows = document.getElementById('projectRows');
-const workloadList = document.getElementById('workloadList');
-const heatmapList = document.getElementById('heatmapList');
-const approvalList = document.getElementById('approvalList');
-const kanbanBoard = document.getElementById('kanbanBoard');
-const projectForm = document.getElementById('projectForm');
-const formStatus = document.getElementById('formStatus');
+(function () {
+  "use strict";
 
-async function fetchJson(path, options = {}) {
-  const res = await fetch(`${apiBase}${path}`, {
-    headers: { 'content-type': 'application/json' },
-    ...options
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
-}
+  const API_BASE =
+    (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl
+      ? String(window.APP_CONFIG.apiBaseUrl)
+      : "").replace(/\/+$/, "");
 
-async function loadSummary() {
-  const { data } = await fetchJson('/api/dashboard/summary');
-  summaryCards.innerHTML = [
-    card('Active Projects', data.activeProjects),
-    card('Overdue Tasks', data.overdueTasks),
-    card('Pending Approvals', data.pendingApprovals),
-    card('Open Risks', data.openRisks),
-    card('Open Blockers', data.openBlockers),
-    card('Red Projects', data.redProjects)
-  ].join('');
-}
+  const SELECTORS = {
+    summary: {
+      total: "#total-projects",
+      onTrack: "#on-track",
+      atRisk: "#at-risk",
+      delayed: "#delayed",
+      blocked: "#blocked",
+      avgHealth: "#avg-health-score",
+    },
+    projects: "#project-list",
+    workload: "#workload-list",
+    heatmap: "#heatmap-list",
+    approvals: "#approval-list",
+    kanban: "#kanban-board",
+    status: "#app-status",
+    refreshButtons: '[data-action="refresh"]',
+    createProjectForm: "#create-project-form",
+    createProjectButton: "#create-project-btn",
+    createProjectMessage: "#create-project-message",
+  };
 
-async function loadProjects() {
-  const { data } = await fetchJson('/api/projects');
-  projectRows.innerHTML = data.map(p => `
-    <tr>
-      <td>${escapeHtml(p.code)}</td>
-      <td>${escapeHtml(p.name)}</td>
-      <td>${escapeHtml(p.customer_name || '')}</td>
-      <td>${escapeHtml(p.stage || '')}</td>
-      <td><span class="badge badge-${escapeHtml(p.status)}">${escapeHtml(p.status)}</span></td>
-      <td><span class="health health-${escapeHtml(p.health_status || 'green')}">${escapeHtml((p.health_status || 'green').toUpperCase())} ${escapeHtml(String(p.health_score ?? ''))}</span><div class="subtext">${escapeHtml(p.health_reason || '')}</div></td>
-      <td>${escapeHtml(p.due_date || '')}</td>
-      <td>${escapeHtml(p.owner_name || '')}</td>
-    </tr>
-  `).join('');
-}
-
-async function loadWorkload() {
-  const { data } = await fetchJson('/api/dashboard/workload');
-  workloadList.innerHTML = data.map(item => `
-    <div class="list-item">
-      <div><strong>${escapeHtml(item.display_name)}</strong></div>
-      <div class="subtext">Open: ${escapeHtml(String(item.open_tasks))} • Overdue: ${escapeHtml(String(item.overdue_tasks))} • Pending approvals: ${escapeHtml(String(item.pending_approvals))}</div>
-    </div>
-  `).join('');
-}
-
-async function loadHeatmap() {
-  const { data } = await fetchJson('/api/dashboard/heatmap');
-  heatmapList.innerHTML = data.map(item => `
-    <div class="list-item heat-${escapeHtml(item.health_status)}">
-      <div><strong>${escapeHtml(item.code)}</strong> — ${escapeHtml(item.name)}</div>
-      <div class="subtext">Stage: ${escapeHtml(item.stage)} • Health: ${escapeHtml(item.health_status.toUpperCase())} ${escapeHtml(String(item.health_score))} • Risks: ${escapeHtml(String(item.open_risks))} • Blockers: ${escapeHtml(String(item.open_blockers))}</div>
-    </div>
-  `).join('');
-}
-
-async function loadApprovals() {
-  const { data } = await fetchJson('/api/approvals/pending');
-  approvalList.innerHTML = data.map(item => `
-    <div class="list-item approval-item">
-      <div><strong>#${escapeHtml(String(item.id))}</strong> ${escapeHtml(item.title)}</div>
-      <div class="subtext">${escapeHtml(item.code)} • expires ${escapeHtml(item.expires_at || 'n/a')}</div>
-      <div class="actions-inline">
-        <button data-id="${escapeHtml(String(item.id))}" data-status="approved">Approve</button>
-        <button data-id="${escapeHtml(String(item.id))}" data-status="rejected">Reject</button>
-      </div>
-    </div>
-  `).join('') || '<div class="list-item">No pending approvals.</div>';
-}
-
-async function loadKanban() {
-  const projectData = await fetchJson('/api/projects');
-  const firstProject = projectData.data?.[0];
-  if (!firstProject) {
-    kanbanBoard.innerHTML = '<div class="kanban-column"><h3>No data</h3></div>';
-    return;
+  function $(selector) {
+    return document.querySelector(selector);
   }
-  const detail = await fetchJson(`/api/projects/${firstProject.id}`);
-  const buckets = ['backlog', 'in_progress', 'review', 'blocked', 'done'];
-  kanbanBoard.innerHTML = buckets.map(bucket => {
-    const items = detail.data.tasks.filter(t => (t.bucket || '').toLowerCase() === bucket);
-    return `
-      <div class="kanban-column">
-        <h3>${escapeHtml(bucket.replace('_', ' ').toUpperCase())}</h3>
-        ${items.map(item => `<div class="kanban-card"><strong>${escapeHtml(item.title)}</strong><div class="subtext">${escapeHtml(item.status)} • ${escapeHtml(item.assignee_name || '')} • due ${escapeHtml(item.due_date || 'n/a')}</div></div>`).join('') || '<div class="kanban-card empty">No items</div>'}
-      </div>
-    `;
-  }).join('');
-}
 
-function card(label, value) {
-  return `<article class="card"><div class="card-label">${escapeHtml(label)}</div><div class="card-value">${escapeHtml(String(value))}</div></article>`;
-}
-
-function escapeHtml(str) {
-  return String(str).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-}
-
-projectForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const payload = Object.fromEntries(new FormData(projectForm).entries());
-  try {
-    formStatus.textContent = 'Submitting...';
-    await fetchJson('/api/projects', { method: 'POST', body: JSON.stringify(payload) });
-    formStatus.textContent = 'Project created successfully.';
-    projectForm.reset();
-    await refreshAll();
-  } catch (err) {
-    formStatus.textContent = err.message;
+  function $all(selector) {
+    return Array.from(document.querySelectorAll(selector));
   }
-});
 
-approvalList.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button[data-id]');
-  if (!btn) return;
-  const payload = { status: btn.dataset.status, actor_source: 'web' };
-  try {
-    await fetchJson(`/api/approvals/${btn.dataset.id}/decision`, { method: 'POST', body: JSON.stringify(payload) });
-    await refreshAll();
-  } catch (err) {
-    formStatus.textContent = err.message;
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
-});
 
-async function refreshAll() {
-  await Promise.all([loadSummary(), loadProjects(), loadWorkload(), loadHeatmap(), loadApprovals(), loadKanban()]);
-}
+  function asArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
 
-document.getElementById('refreshBtn').addEventListener('click', refreshAll);
-refreshAll().catch(err => { formStatus.textContent = err.message; });
+  function asObject(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  function safeText(value, fallback = "-") {
+    if (value === null || value === undefined || value === "") return fallback;
+    return String(value);
+  }
+
+  function formatNumber(value, fallback = "0") {
+    const n = Number(value);
+    return Number.isFinite(n) ? String(n) : fallback;
+  }
+
+  function formatDate(value) {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString("vi-VN");
+  }
+
+  function getStatusClass(status) {
+    const s = String(status || "").toLowerCase();
+    if (s === "blocked") return "status-blocked";
+    if (s === "delayed") return "status-delayed";
+    if (s === "at_risk") return "status-at-risk";
+    return "status-on-track";
+  }
+
+  function setStatus(message, type = "info") {
+    const el = $(SELECTORS.status);
+    if (!el) return;
+    el.textContent = message || "";
+    el.dataset.state = type;
+  }
+
+  async function fetchJson(path, options = {}) {
+    if (!API_BASE) {
+      throw new Error("Thiếu APP_CONFIG.apiBaseUrl trong config.js");
+    }
+
+    const url = `${API_BASE}${path}`;
+    const method = options.method || "GET";
+    const headers = {
+      ...(options.headers || {}),
+    };
+
+    let body;
+    if (options.body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(options.body);
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers,
+      body,
+    });
+
+    const raw = await response.text();
+    let data = null;
+
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch (err) {
+      throw new Error(`API không trả JSON hợp lệ (${response.status}): ${raw}`);
+    }
+
+    if (!response.ok) {
+      const apiError =
+        (data && typeof data === "object" && (data.error || data.message)) ||
+        `HTTP ${response.status}`;
+      throw new Error(apiError);
+    }
+
+    return data;
+  }
+
+  function renderEmpty(el, message) {
+    if (!el) return;
+    el.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+  }
+
+  function renderSummary(summary) {
+    const data = asObject(summary);
+
+    const totalEl = $(SELECTORS.summary.total);
+    const onTrackEl = $(SELECTORS.summary.onTrack);
+    const atRiskEl = $(SELECTORS.summary.atRisk);
+    const delayedEl = $(SELECTORS.summary.delayed);
+    const blockedEl = $(SELECTORS.summary.blocked);
+    const avgHealthEl = $(SELECTORS.summary.avgHealth);
+
+    if (totalEl) totalEl.textContent = formatNumber(data.total_projects, "0");
+    if (onTrackEl) onTrackEl.textContent = formatNumber(data.on_track, "0");
+    if (atRiskEl) atRiskEl.textContent = formatNumber(data.at_risk, "0");
+    if (delayedEl) delayedEl.textContent = formatNumber(data.delayed, "0");
+    if (blockedEl) blockedEl.textContent = formatNumber(data.blocked, "0");
+    if (avgHealthEl) avgHealthEl.textContent = formatNumber(data.avg_health_score, "0");
+  }
+
+  function renderProjects(projects) {
+    const el = $(SELECTORS.projects);
+    if (!el) return;
+
+    const rows = asArray(projects);
+
+    if (!rows.length) {
+      renderEmpty(el, "Chưa có project.");
+      return;
+    }
+
+    el.innerHTML = rows
+      .map((p) => {
+        const healthStatus = safeText(p.health_status, "on_track");
+        const healthScore = formatNumber(p.health_score, "100");
+        return `
+          <div class="project-card ${escapeHtml(getStatusClass(healthStatus))}">
+            <div class="project-card__header">
+              <div class="project-card__code">${escapeHtml(safeText(p.project_code))}</div>
+              <div class="project-card__badge">${escapeHtml(healthStatus)}</div>
+            </div>
+            <div class="project-card__title">${escapeHtml(safeText(p.project_name))}</div>
+            <div class="project-card__meta">
+              <div><strong>Type:</strong> ${escapeHtml(safeText(p.project_type, "GENERAL"))}</div>
+              <div><strong>Stage:</strong> ${escapeHtml(safeText(p.stage, "intake"))}</div>
+              <div><strong>Owner:</strong> ${escapeHtml(safeText(p.owner, "Unassigned"))}</div>
+              <div><strong>Health:</strong> ${escapeHtml(healthScore)}</div>
+              <div><strong>Due:</strong> ${escapeHtml(formatDate(p.due_date))}</div>
+            </div>
+            <div class="project-card__metrics">
+              <span>Tasks: ${escapeHtml(formatNumber(p.task_count, "0"))}</span>
+              <span>Overdue: ${escapeHtml(formatNumber(p.overdue_tasks, "0"))}</span>
+              <span>Risks: ${escapeHtml(formatNumber(p.risk_count, "0"))}</span>
+              <span>Blockers: ${escapeHtml(formatNumber(p.blocker_count, "0"))}</span>
+              <span>Approvals: ${escapeHtml(formatNumber(p.pending_approvals, "0"))}</span>
+            </div>
+            <div class="project-card__reason">${escapeHtml(safeText(p.health_reason, "Healthy baseline"))}</div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function renderWorkload(workload) {
+    const el = $(SELECTORS.workload);
+    if (!el) return;
+
+    const rows = asArray(workload);
+
+    if (!rows.length) {
+      renderEmpty(el, "Chưa có dữ liệu workload.");
+      return;
+    }
+
+    el.innerHTML = rows
+      .map(
+        (item) => `
+          <div class="list-row">
+            <div class="list-row__title">${escapeHtml(safeText(item.owner, "Unassigned"))}</div>
+            <div class="list-row__value">${escapeHtml(formatNumber(item.active_tasks, "0"))}</div>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function renderHeatmap(heatmap) {
+    const el = $(SELECTORS.heatmap);
+    if (!el) return;
+
+    const rows = asArray(heatmap);
+
+    if (!rows.length) {
+      renderEmpty(el, "Chưa có dữ liệu heatmap.");
+      return;
+    }
+
+    el.innerHTML = rows
+      .map(
+        (item) => `
+          <div class="list-row">
+            <div class="list-row__title">
+              ${escapeHtml(safeText(item.type, "-"))} / ${escapeHtml(safeText(item.category, "-"))}
+            </div>
+            <div class="list-row__value">${escapeHtml(formatNumber(item.count, "0"))}</div>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function renderApprovals(approvals) {
+    const el = $(SELECTORS.approvals);
+    if (!el) return;
+
+    const rows = asArray(approvals);
+
+    if (!rows.length) {
+      renderEmpty(el, "Không có approval đang chờ.");
+      return;
+    }
+
+    el.innerHTML = rows
+      .map(
+        (item) => `
+          <div class="approval-card">
+            <div class="approval-card__top">
+              <strong>#${escapeHtml(safeText(item.id))}</strong>
+              <span>${escapeHtml(safeText(item.status, "pending"))}</span>
+            </div>
+            <div><strong>Project ID:</strong> ${escapeHtml(safeText(item.project_id))}</div>
+            <div><strong>Approver:</strong> ${escapeHtml(safeText(item.approver, "-"))}</div>
+            <div><strong>Created:</strong> ${escapeHtml(formatDate(item.created_at))}</div>
+            <div><strong>Comment:</strong> ${escapeHtml(safeText(item.comment, "-"))}</div>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function renderKanban(projects) {
+    const el = $(SELECTORS.kanban);
+    if (!el) return;
+
+    const rows = asArray(projects);
+    const stages = [
+      "intake",
+      "analysis",
+      "design",
+      "review",
+      "approval",
+      "execution",
+      "validation",
+      "handover",
+      "closed",
+    ];
+
+    const groups = new Map(stages.map((stage) => [stage, []]));
+
+    for (const project of rows) {
+      const stage = String(project.stage || "intake").toLowerCase();
+      if (!groups.has(stage)) groups.set(stage, []);
+      groups.get(stage).push(project);
+    }
+
+    el.innerHTML = Array.from(groups.entries())
+      .map(([stage, items]) => {
+        const cards = asArray(items)
+          .map(
+            (p) => `
+              <div class="kanban-card ${escapeHtml(getStatusClass(p.health_status))}">
+                <div class="kanban-card__code">${escapeHtml(safeText(p.project_code))}</div>
+                <div class="kanban-card__title">${escapeHtml(safeText(p.project_name))}</div>
+                <div class="kanban-card__meta">
+                  ${escapeHtml(safeText(p.owner, "Unassigned"))} • ${escapeHtml(safeText(p.health_status, "on_track"))}
+                </div>
+              </div>
+            `
+          )
+          .join("");
+
+        return `
+          <div class="kanban-column">
+            <div class="kanban-column__title">${escapeHtml(stage)}</div>
+            <div class="kanban-column__count">${items.length}</div>
+            <div class="kanban-column__body">
+              ${cards || '<div class="empty-state">Không có item</div>'}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  async function loadSummary() {
+    const summary = await fetchJson("/api/dashboard/summary");
+    renderSummary(summary);
+    return summary;
+  }
+
+  async function loadProjects() {
+    const projects = await fetchJson("/api/projects");
+    const rows = asArray(projects);
+    renderProjects(rows);
+    renderKanban(rows);
+    return rows;
+  }
+
+  async function loadWorkload() {
+    const workload = await fetchJson("/api/dashboard/workload");
+    const rows = asArray(workload);
+    renderWorkload(rows);
+    return rows;
+  }
+
+  async function loadHeatmap() {
+    const heatmap = await fetchJson("/api/dashboard/heatmap");
+    const rows = asArray(heatmap);
+    renderHeatmap(rows);
+    return rows;
+  }
+
+  async function loadApprovals() {
+    const approvals = await fetchJson("/api/approvals/pending");
+    const rows = asArray(approvals);
+    renderApprovals(rows);
+    return rows;
+  }
+
+  async function refreshAll() {
+    try {
+      setStatus("Đang tải dữ liệu...", "loading");
+
+      await Promise.all([
+        loadSummary(),
+        loadProjects(),
+        loadWorkload(),
+        loadHeatmap(),
+        loadApprovals(),
+      ]);
+
+      setStatus("Đã tải dữ liệu thành công.", "success");
+    } catch (err) {
+      console.error("refreshAll error:", err);
+      setStatus(`Lỗi tải dữ liệu: ${err.message}`, "error");
+    }
+  }
+
+  function readFormData(form) {
+    const formData = new FormData(form);
+    return {
+      project_code: String(formData.get("project_code") || "").trim() || undefined,
+      project_name: String(formData.get("project_name") || formData.get("name") || "").trim(),
+      project_type: String(formData.get("project_type") || "GENERAL").trim(),
+      stage: String(formData.get("stage") || "intake").trim(),
+      owner: String(formData.get("owner") || "Unassigned").trim(),
+      due_date: String(formData.get("due_date") || "").trim() || undefined,
+    };
+  }
+
+  async function handleCreateProject(event) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const msgEl = $(SELECTORS.createProjectMessage);
+    const submitBtn =
+      form.querySelector('button[type="submit"]') || $(SELECTORS.createProjectButton);
+
+    try {
+      if (submitBtn) submitBtn.disabled = true;
+      if (msgEl) {
+        msgEl.textContent = "Đang tạo project...";
+        msgEl.dataset.state = "loading";
+      }
+
+      const payload = readFormData(form);
+
+      if (!payload.project_name) {
+        throw new Error("Vui lòng nhập Project Name.");
+      }
+
+      const result = await fetchJson("/api/projects", {
+        method: "POST",
+        body: payload,
+      });
+
+      if (msgEl) {
+        msgEl.textContent = `Tạo thành công: ${result.project_code || payload.project_name}`;
+        msgEl.dataset.state = "success";
+      }
+
+      form.reset();
+      await refreshAll();
+    } catch (err) {
+      console.error("handleCreateProject error:", err);
+      if (msgEl) {
+        msgEl.textContent = `Tạo project thất bại: ${err.message}`;
+        msgEl.dataset.state = "error";
+      } else {
+        setStatus(`Tạo project thất bại: ${err.message}`, "error");
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  function bindEvents() {
+    const form = $(SELECTORS.createProjectForm);
+    if (form) {
+      form.addEventListener("submit", handleCreateProject);
+    }
+
+    $all(SELECTORS.refreshButtons).forEach((btn) => {
+      btn.addEventListener("click", function () {
+        refreshAll();
+      });
+    });
+  }
+
+  function bootstrap() {
+    bindEvents();
+    refreshAll();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootstrap);
+  } else {
+    bootstrap();
+  }
+})();
