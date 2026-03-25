@@ -1,3 +1,3 @@
 window.APP_CONFIG = {
-  apiBaseUrl: 'https://example.workers.dev'
+  apiBaseUrl: 'https://ctel-csdp-worker.thanhlm120797.workers.dev'
 };
