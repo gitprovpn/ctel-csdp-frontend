@@ -25,6 +25,7 @@
     createProjectForm: "#create-project-form",
     createProjectButton: "#create-project-btn",
     createProjectMessage: "#create-project-message",
+    overviewPanel: ".section.grid.two-col-equal .panel:last-child .panel-body",
   };
 
   function $(selector) {
@@ -323,6 +324,78 @@
       .join("");
   }
 
+  function buildInsights(projects, workload, approvals) {
+    const safeProjects = asArray(projects);
+    const safeWorkload = asArray(workload);
+    const safeApprovals = asArray(approvals);
+
+    const mostDangerousProject =
+      safeProjects
+        .slice()
+        .sort((a, b) => {
+          const scoreDiff = Number(a.health_score || 0) - Number(b.health_score || 0);
+          if (scoreDiff !== 0) return scoreDiff;
+          return Number(b.blocker_count || 0) - Number(a.blocker_count || 0);
+        })[0] || null;
+
+    const busiestOwner =
+      safeWorkload
+        .slice()
+        .sort((a, b) => Number(b.active_tasks || 0) - Number(a.active_tasks || 0))[0] || null;
+
+    return {
+      mostDangerousProject,
+      busiestOwner,
+      pendingApprovalsCount: safeApprovals.length,
+    };
+  }
+
+  function renderOverviewNotes(projects, workload, approvals) {
+    const el = $(SELECTORS.overviewPanel);
+    if (!el) return;
+
+    const insights = buildInsights(projects, workload, approvals);
+    const danger = insights.mostDangerousProject;
+    const busiest = insights.busiestOwner;
+
+    el.innerHTML = `
+      <div class="project-list">
+        <div class="project-card ${escapeHtml(getStatusClass(danger?.health_status || "on_track"))}">
+          <div class="project-card__header">
+            <div class="project-card__code">Project nguy hiểm nhất</div>
+            <div class="project-card__badge">${escapeHtml(safeText(danger?.health_status, "N/A"))}</div>
+          </div>
+          <div class="project-card__title">${escapeHtml(safeText(danger?.project_name, "Chưa có dữ liệu"))}</div>
+          <div class="project-card__meta">
+            <div><strong>Code:</strong> ${escapeHtml(safeText(danger?.project_code))}</div>
+            <div><strong>Health:</strong> ${escapeHtml(formatNumber(danger?.health_score, "0"))}</div>
+            <div><strong>Stage:</strong> ${escapeHtml(safeText(danger?.stage))}</div>
+            <div><strong>Owner:</strong> ${escapeHtml(safeText(danger?.owner, "Unassigned"))}</div>
+          </div>
+          <div class="project-card__reason">${escapeHtml(safeText(danger?.health_reason, "Không có insight."))}</div>
+        </div>
+
+        <div class="list-row">
+          <div class="list-row__title">
+            Owner quá tải nhất<br />
+            <span style="color: var(--muted); font-size: 12px;">
+              ${escapeHtml(safeText(busiest?.owner, "Chưa có dữ liệu"))}
+            </span>
+          </div>
+          <div class="list-row__value">${escapeHtml(formatNumber(busiest?.active_tasks, "0"))}</div>
+        </div>
+
+        <div class="list-row">
+          <div class="list-row__title">
+            Approval đang pending<br />
+            <span style="color: var(--muted); font-size: 12px;">Tổng số approval chờ xử lý</span>
+          </div>
+          <div class="list-row__value">${escapeHtml(formatNumber(insights.pendingApprovalsCount, "0"))}</div>
+        </div>
+      </div>
+    `;
+  }
+
   async function loadSummary() {
     const summary = await fetchJson("/api/dashboard/summary");
     renderSummary(summary);
@@ -362,7 +435,7 @@
     try {
       setStatus("Đang tải dữ liệu...", "loading");
 
-      await Promise.all([
+      const [summary, projects, workload, heatmap, approvals] = await Promise.all([
         loadSummary(),
         loadProjects(),
         loadWorkload(),
@@ -370,10 +443,14 @@
         loadApprovals(),
       ]);
 
+      renderOverviewNotes(projects, workload, approvals);
+
       setStatus("Đã tải dữ liệu thành công.", "success");
+      return { summary, projects, workload, heatmap, approvals };
     } catch (err) {
       console.error("refreshAll error:", err);
       setStatus(`Lỗi tải dữ liệu: ${err.message}`, "error");
+      throw err;
     }
   }
 
@@ -450,7 +527,9 @@
 
   function bootstrap() {
     bindEvents();
-    refreshAll();
+    refreshAll().catch((err) => {
+      console.error("bootstrap error:", err);
+    });
   }
 
   if (document.readyState === "loading") {
