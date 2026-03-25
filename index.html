@@ -6,20 +6,24 @@
   <title>Cyber Solution Delivery Platform</title>
   <style>
     :root {
-      --bg: #0b1220;
-      --panel: #121a2b;
-      --panel-2: #182235;
+      --bg-1: #07101d;
+      --bg-2: #0b1220;
+      --panel: rgba(18, 27, 44, 0.92);
+      --panel-2: rgba(24, 35, 56, 0.92);
       --border: rgba(255, 255, 255, 0.08);
-      --text: #e8eefc;
-      --muted: #97a3bd;
+      --border-strong: rgba(96, 165, 250, 0.18);
+      --text: #eaf1ff;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+      --accent-2: #22d3ee;
       --ok: #22c55e;
       --risk: #f59e0b;
       --delay: #f97316;
       --blocked: #ef4444;
-      --accent: #60a5fa;
-      --accent-2: #22d3ee;
-      --shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
-      --radius: 18px;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      --radius: 20px;
+      --radius-sm: 14px;
+      --maxw: 1360px;
     }
 
     * {
@@ -29,71 +33,77 @@
     html, body {
       margin: 0;
       padding: 0;
-      background: linear-gradient(180deg, #09101c 0%, #0b1220 100%);
+      min-height: 100%;
       color: var(--text);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 25%),
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.10), transparent 28%),
+        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
+    body {
+      line-height: 1.45;
     }
 
     .app {
-      width: min(1400px, calc(100% - 32px));
-      margin: 24px auto 48px;
+      width: min(var(--maxw), calc(100% - 28px));
+      margin: 20px auto 40px;
     }
 
     .topbar {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: flex-start;
       gap: 16px;
-      margin-bottom: 24px;
       flex-wrap: wrap;
-    }
-
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      margin-bottom: 18px;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(17, 27, 45, 0.86), rgba(11, 18, 32, 0.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
     }
 
     .brand h1 {
-      margin: 0;
-      font-size: 28px;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
+      margin: 0 0 6px;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
     }
 
     .brand p {
       margin: 0;
       color: var(--muted);
       font-size: 14px;
+      max-width: 700px;
     }
 
     .topbar-actions {
       display: flex;
-      gap: 12px;
       align-items: center;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
     .btn {
       appearance: none;
       border: 1px solid var(--border);
-      background: linear-gradient(180deg, #19243a 0%, #121b2c 100%);
-      color: var(--text);
-      padding: 12px 16px;
       border-radius: 14px;
+      background: linear-gradient(180deg, #1c2a44 0%, #121c2f 100%);
+      color: var(--text);
+      padding: 11px 16px;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 14px;
       box-shadow: var(--shadow);
-      transition: transform 0.15s ease, opacity 0.15s ease;
+      transition: transform 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
     }
 
     .btn:hover {
       transform: translateY(-1px);
+      border-color: var(--border-strong);
     }
 
     .btn:disabled {
@@ -103,62 +113,69 @@
     }
 
     .status-bar {
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       padding: 12px 14px;
       border-radius: 14px;
       border: 1px solid var(--border);
       background: rgba(255, 255, 255, 0.04);
       color: var(--muted);
       font-size: 14px;
+      backdrop-filter: blur(8px);
     }
 
-    .status-bar[data-state="loading"] {
-      color: var(--accent-2);
+    .status-bar[data-state="loading"] { color: var(--accent-2); }
+    .status-bar[data-state="success"] { color: #86efac; }
+    .status-bar[data-state="error"] { color: #fca5a5; }
+
+    .section {
+      margin-top: 18px;
     }
 
-    .status-bar[data-state="success"] {
-      color: #86efac;
-    }
-
-    .status-bar[data-state="error"] {
-      color: #fca5a5;
+    .section:first-of-type {
+      margin-top: 0;
     }
 
     .grid {
       display: grid;
-      gap: 18px;
+      gap: 16px;
     }
 
-    .grid-6 {
+    .stats-grid {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 
-    .grid-main {
-      grid-template-columns: 1.2fr 1fr;
-      margin-top: 18px;
+    .two-col {
+      grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
+      align-items: start;
+    }
+
+    .two-col-equal {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       align-items: start;
     }
 
     .panel {
-      background: linear-gradient(180deg, rgba(24, 34, 53, 0.95) 0%, rgba(18, 26, 43, 0.96) 100%);
       border: 1px solid var(--border);
       border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
       box-shadow: var(--shadow);
       overflow: hidden;
+      backdrop-filter: blur(10px);
     }
 
     .panel-header {
       padding: 18px 18px 8px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      align-items: flex-start;
+      gap: 14px;
     }
 
     .panel-title {
       margin: 0;
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
     }
 
     .panel-subtitle {
@@ -172,11 +189,11 @@
     }
 
     .stat-card {
-      padding: 18px;
-      border-radius: var(--radius);
-      background: linear-gradient(180deg, rgba(31, 44, 68, 0.9) 0%, rgba(19, 29, 46, 0.95) 100%);
       border: 1px solid var(--border);
-      min-height: 112px;
+      border-radius: 18px;
+      padding: 18px;
+      min-height: 110px;
+      background: linear-gradient(180deg, rgba(29, 43, 68, 0.88), rgba(17, 27, 43, 0.95));
     }
 
     .stat-label {
@@ -208,10 +225,10 @@
     .project-card,
     .approval-card,
     .list-row {
-      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 14px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.035);
     }
 
     .project-card__header,
@@ -227,7 +244,7 @@
     .kanban-card__code {
       font-size: 12px;
       color: var(--accent-2);
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
@@ -239,13 +256,15 @@
       background: rgba(255, 255, 255, 0.08);
       color: var(--text);
       text-transform: lowercase;
+      white-space: nowrap;
     }
 
     .project-card__title,
     .kanban-card__title {
       font-size: 18px;
-      font-weight: 700;
+      font-weight: 800;
       margin: 10px 0;
+      letter-spacing: -0.02em;
     }
 
     .project-card__meta,
@@ -262,28 +281,16 @@
       margin-top: 12px;
       color: #dbe7ff;
       font-size: 13px;
-      line-height: 1.5;
     }
 
-    .status-on-track {
-      box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18);
-    }
-
-    .status-at-risk {
-      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18);
-    }
-
-    .status-delayed {
-      box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.18);
-    }
-
-    .status-blocked {
-      box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.2);
-    }
+    .status-on-track { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18); }
+    .status-at-risk { box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18); }
+    .status-delayed { box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.18); }
+    .status-blocked { box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.22); }
 
     .list-row__title {
       color: var(--text);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .list-row__value {
@@ -292,30 +299,87 @@
       font-size: 18px;
     }
 
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      outline: none;
+    }
+
+    .field input::placeholder {
+      color: #7f8aa3;
+    }
+
+    .form-actions {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .form-message {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .form-message[data-state="success"] { color: #86efac; }
+    .form-message[data-state="error"] { color: #fca5a5; }
+
+    .empty-state {
+      border: 1px dashed rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      padding: 14px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+    }
+
     .kanban-board {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
-      align-items: start;
+      align-items: stretch;
     }
 
     .kanban-column {
-      min-height: 180px;
-      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 14px;
+      background: rgba(255, 255, 255, 0.03);
       display: flex;
       flex-direction: column;
       gap: 12px;
-      height: 100%;
+      min-height: 170px;
     }
 
     .kanban-column__title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 800;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
     }
 
     .kanban-column__count {
@@ -340,70 +404,7 @@
     .kanban-card__meta {
       color: var(--muted);
       font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .empty-state {
-      border: 1px dashed rgba(255, 255, 255, 0.16);
-      border-radius: 14px;
-      padding: 14px;
-      color: var(--muted);
-      text-align: center;
-      font-size: 14px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .field label {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    .field input,
-    .field select {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 12px 14px;
-      outline: none;
-    }
-
-    .field input::placeholder {
-      color: #7f8aa3;
-    }
-
-    .form-actions {
-      margin-top: 16px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .form-message {
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .form-message[data-state="success"] {
-      color: #86efac;
-    }
-
-    .form-message[data-state="error"] {
-      color: #fca5a5;
+      line-height: 1.45;
     }
 
     .footer-note {
@@ -414,50 +415,38 @@
     }
 
     @media (max-width: 1200px) {
-      .grid-6 {
+      .stats-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
-      .grid-main {
+      .two-col,
+      .two-col-equal {
         grid-template-columns: 1fr;
-      }
-
-      .kanban-board {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 900px) {
-      .kanban-board {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 720px) {
       .app {
-        width: min(100% - 20px, 100%);
-        margin: 14px auto 28px;
-      }
-
-      .grid-6 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .project-card__meta,
-      .project-card__metrics {
-        grid-template-columns: 1fr;
-      }
-
-      .kanban-board {
-        grid-template-columns: 1fr;
+        width: min(100% - 18px, 100%);
+        margin: 12px auto 28px;
       }
 
       .topbar {
-        align-items: flex-start;
+        padding: 16px;
+      }
+
+      .brand h1 {
+        font-size: 25px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-grid,
+      .project-card__meta,
+      .project-card__metrics {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -467,7 +456,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>Cyber Solution Delivery Platform</h1>
-        <p>CTEL SA Cyber — dashboard vận hành dự án, health score, approval và workload.</p>
+        <p>Dashboard theo dõi tiến độ, rủi ro, approval và health score cho team Solution Architect Cyber Security.</p>
       </div>
       <div class="topbar-actions">
         <button class="btn" data-action="refresh" type="button">Refresh Dashboard</button>
@@ -476,7 +465,7 @@
 
     <div id="app-status" class="status-bar" data-state="idle">Sẵn sàng.</div>
 
-    <section class="grid grid-6">
+    <section class="section grid stats-grid">
       <div class="stat-card accent">
         <div class="stat-label">Total Projects</div>
         <div class="stat-value" id="total-projects">0</div>
@@ -503,12 +492,12 @@
       </div>
     </section>
 
-    <section class="grid grid-main">
+    <section class="section grid two-col">
       <div class="panel">
         <div class="panel-header">
           <div>
             <h2 class="panel-title">Projects</h2>
-            <p class="panel-subtitle">Danh sách project thực tế từ D1 database.</p>
+            <p class="panel-subtitle">Danh sách project hiện có trong D1 database.</p>
           </div>
         </div>
         <div class="panel-body">
@@ -520,7 +509,7 @@
         <div class="panel-header">
           <div>
             <h2 class="panel-title">Create Project</h2>
-            <p class="panel-subtitle">Tạo nhanh project mới để test end-to-end.</p>
+            <p class="panel-subtitle">Tạo project mới để kiểm tra flow end-to-end.</p>
           </div>
         </div>
         <div class="panel-body">
@@ -582,12 +571,12 @@
       </div>
     </section>
 
-    <section class="grid grid-main" style="margin-top: 18px;">
+    <section class="section grid two-col-equal">
       <div class="panel">
         <div class="panel-header">
           <div>
             <h2 class="panel-title">Workload</h2>
-            <p class="panel-subtitle">Active tasks theo owner.</p>
+            <p class="panel-subtitle">Số lượng active tasks theo owner.</p>
           </div>
         </div>
         <div class="panel-body">
@@ -608,23 +597,37 @@
       </div>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
-      <div class="panel-header">
-        <div>
-          <h2 class="panel-title">Risk / Blocker Heatmap</h2>
-          <p class="panel-subtitle">Tổng hợp rủi ro và blocker từ D1.</p>
+    <section class="section grid two-col-equal">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Risk / Blocker Heatmap</h2>
+            <p class="panel-subtitle">Tổng hợp rủi ro và blocker đang mở.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="heatmap-list" class="heatmap-list"></div>
         </div>
       </div>
-      <div class="panel-body">
-        <div id="heatmap-list" class="heatmap-list"></div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Overview Notes</h2>
+            <p class="panel-subtitle">Khu vực này giữ bố cục cân đối và thân thiện hơn.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="empty-state">Dùng phần này để bổ sung filter, search hoặc project insights ở bản tiếp theo.</div>
+        </div>
       </div>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
+    <section class="section panel">
       <div class="panel-header">
         <div>
           <h2 class="panel-title">Kanban Overview</h2>
-          <p class="panel-subtitle">Nhóm project theo stage, tự xuống dòng theo kích thước màn hình.</p>
+          <p class="panel-subtitle">Project được nhóm theo stage, tự xuống dòng theo kích thước màn hình, không scroll ngang.</p>
         </div>
       </div>
       <div class="panel-body">
