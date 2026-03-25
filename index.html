@@ -294,10 +294,9 @@
 
     .kanban-board {
       display: grid;
-      grid-template-columns: repeat(5, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
-      overflow-x: auto;
-      padding-bottom: 6px;
+      align-items: start;
     }
 
     .kanban-column {
@@ -309,6 +308,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      height: 100%;
     }
 
     .kanban-column__title {
@@ -327,6 +327,7 @@
     .kanban-column__body {
       display: grid;
       gap: 10px;
+      align-content: start;
     }
 
     .kanban-card {
@@ -422,7 +423,13 @@
       }
 
       .kanban-board {
-        grid-template-columns: repeat(3, minmax(240px, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .kanban-board {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -601,29 +608,15 @@
       </div>
     </section>
 
-    <section class="grid grid-main" style="margin-top: 18px;">
-      <div class="panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">Risk / Blocker Heatmap</h2>
-            <p class="panel-subtitle">Tổng hợp rủi ro và blocker từ D1.</p>
-          </div>
-        </div>
-        <div class="panel-body">
-          <div id="heatmap-list" class="heatmap-list"></div>
+    <section class="panel" style="margin-top: 18px;">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Risk / Blocker Heatmap</h2>
+          <p class="panel-subtitle">Tổng hợp rủi ro và blocker từ D1.</p>
         </div>
       </div>
-
-      <div class="panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">Quick Actions</h2>
-            <p class="panel-subtitle">Các thao tác test giao diện.</p>
-          </div>
-        </div>
-        <div class="panel-body">
-          <button class="btn" data-action="refresh" type="button">Refresh All</button>
-        </div>
+      <div class="panel-body">
+        <div id="heatmap-list" class="heatmap-list"></div>
       </div>
     </section>
 
@@ -631,7 +624,7 @@
       <div class="panel-header">
         <div>
           <h2 class="panel-title">Kanban Overview</h2>
-          <p class="panel-subtitle">Nhóm project theo stage để kiểm tra lifecycle.</p>
+          <p class="panel-subtitle">Nhóm project theo stage, tự xuống dòng theo kích thước màn hình.</p>
         </div>
       </div>
       <div class="panel-body">
