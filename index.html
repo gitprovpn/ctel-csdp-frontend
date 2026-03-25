@@ -1,97 +1,648 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cyber Solution Delivery Platform v2</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Solution Delivery Platform</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-2: #182235;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #e8eefc;
+      --muted: #97a3bd;
+      --ok: #22c55e;
+      --risk: #f59e0b;
+      --delay: #f97316;
+      --blocked: #ef4444;
+      --accent: #60a5fa;
+      --accent-2: #22d3ee;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #09101c 0%, #0b1220 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .app {
+      width: min(1400px, calc(100% - 32px));
+      margin: 24px auto 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #19243a 0%, #121b2c 100%);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-bar {
+      margin-bottom: 20px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status-bar[data-state="loading"] {
+      color: var(--accent-2);
+    }
+
+    .status-bar[data-state="success"] {
+      color: #86efac;
+    }
+
+    .status-bar[data-state="error"] {
+      color: #fca5a5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-6 {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .grid-main {
+      grid-template-columns: 1.2fr 1fr;
+      margin-top: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(24, 34, 53, 0.95) 0%, rgba(18, 26, 43, 0.96) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 18px 18px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .panel-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .stat-card {
+      padding: 18px;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(31, 44, 68, 0.9) 0%, rgba(19, 29, 46, 0.95) 100%);
+      border: 1px solid var(--border);
+      min-height: 112px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .stat-card.ok .stat-value { color: #86efac; }
+    .stat-card.risk .stat-value { color: #fde68a; }
+    .stat-card.delay .stat-value { color: #fdba74; }
+    .stat-card.blocked .stat-value { color: #fca5a5; }
+    .stat-card.accent .stat-value { color: #93c5fd; }
+
+    .project-list,
+    .workload-list,
+    .heatmap-list,
+    .approval-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .project-card,
+    .approval-card,
+    .list-row {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .project-card__header,
+    .approval-card__top,
+    .list-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .project-card__code,
+    .kanban-card__code {
+      font-size: 12px;
+      color: var(--accent-2);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .project-card__badge {
+      font-size: 12px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      text-transform: lowercase;
+    }
+
+    .project-card__title,
+    .kanban-card__title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 10px 0;
+    }
+
+    .project-card__meta,
+    .project-card__metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .project-card__reason {
+      margin-top: 12px;
+      color: #dbe7ff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .status-on-track {
+      box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18);
+    }
+
+    .status-at-risk {
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18);
+    }
+
+    .status-delayed {
+      box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.18);
+    }
+
+    .status-blocked {
+      box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.2);
+    }
+
+    .list-row__title {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .list-row__value {
+      color: var(--accent-2);
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(240px, 1fr));
+      gap: 14px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .kanban-column {
+      min-height: 180px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .kanban-column__title {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .kanban-column__count {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: -4px;
+    }
+
+    .kanban-column__body {
+      display: grid;
+      gap: 10px;
+    }
+
+    .kanban-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .kanban-card__meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .empty-state {
+      border: 1px dashed rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      padding: 14px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      outline: none;
+    }
+
+    .field input::placeholder {
+      color: #7f8aa3;
+    }
+
+    .form-actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .form-message {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .form-message[data-state="success"] {
+      color: #86efac;
+    }
+
+    .form-message[data-state="error"] {
+      color: #fca5a5;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 1200px) {
+      .grid-6 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-main {
+        grid-template-columns: 1fr;
+      }
+
+      .kanban-board {
+        grid-template-columns: repeat(3, minmax(240px, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100% - 20px, 100%);
+        margin: 14px auto 28px;
+      }
+
+      .grid-6 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .project-card__meta,
+      .project-card__metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .kanban-board {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <div class="eyebrow">CTEL • Solution Architect Cyber Security</div>
-      <h1>Cyber Solution Delivery Platform</h1>
-      <p>Health scoring, workload, approval queue, and CTEL delivery rules</p>
-    </div>
-    <div class="actions">
-      <button id="refreshBtn">Refresh</button>
-    </div>
-  </header>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Cyber Solution Delivery Platform</h1>
+        <p>CTEL SA Cyber — dashboard vận hành dự án, health score, approval và workload.</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn" data-action="refresh" type="button">Refresh Dashboard</button>
+      </div>
+    </header>
 
-  <main class="container">
-    <section class="cards" id="summaryCards"></section>
+    <div id="app-status" class="status-bar" data-state="idle">Sẵn sàng.</div>
 
-    <section class="grid-2">
-      <section class="panel">
-        <div class="panel-head"><h2>Project Control Tower</h2></div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Code</th><th>Name</th><th>Customer</th><th>Stage</th><th>Status</th><th>Health</th><th>Due</th><th>Owner</th>
-              </tr>
-            </thead>
-            <tbody id="projectRows"></tbody>
-          </table>
+    <section class="grid grid-6">
+      <div class="stat-card accent">
+        <div class="stat-label">Total Projects</div>
+        <div class="stat-value" id="total-projects">0</div>
+      </div>
+      <div class="stat-card ok">
+        <div class="stat-label">On Track</div>
+        <div class="stat-value" id="on-track">0</div>
+      </div>
+      <div class="stat-card risk">
+        <div class="stat-label">At Risk</div>
+        <div class="stat-value" id="at-risk">0</div>
+      </div>
+      <div class="stat-card delay">
+        <div class="stat-label">Delayed</div>
+        <div class="stat-value" id="delayed">0</div>
+      </div>
+      <div class="stat-card blocked">
+        <div class="stat-label">Blocked</div>
+        <div class="stat-value" id="blocked">0</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="stat-label">Avg Health Score</div>
+        <div class="stat-value" id="avg-health-score">0</div>
+      </div>
+    </section>
+
+    <section class="grid grid-main">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Projects</h2>
+            <p class="panel-subtitle">Danh sách project thực tế từ D1 database.</p>
+          </div>
         </div>
-      </section>
+        <div class="panel-body">
+          <div id="project-list" class="project-list"></div>
+        </div>
+      </div>
 
-      <section class="panel stack">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Create Project</h2>
+            <p class="panel-subtitle">Tạo nhanh project mới để test end-to-end.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <form id="create-project-form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="project_code">Project Code</label>
+                <input id="project_code" name="project_code" type="text" placeholder="CTEL-SA-2026-003" />
+              </div>
+
+              <div class="field">
+                <label for="project_name">Project Name</label>
+                <input id="project_name" name="project_name" type="text" placeholder="VD: MSSP Review Project" required />
+              </div>
+
+              <div class="field">
+                <label for="project_type">Project Type</label>
+                <select id="project_type" name="project_type">
+                  <option value="GENERAL">GENERAL</option>
+                  <option value="presales">presales</option>
+                  <option value="delivery">delivery</option>
+                  <option value="review">review</option>
+                  <option value="handover">handover</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="stage">Stage</label>
+                <select id="stage" name="stage">
+                  <option value="intake">intake</option>
+                  <option value="analysis">analysis</option>
+                  <option value="design">design</option>
+                  <option value="review">review</option>
+                  <option value="approval">approval</option>
+                  <option value="execution">execution</option>
+                  <option value="validation">validation</option>
+                  <option value="handover">handover</option>
+                  <option value="closed">closed</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="owner">Owner</label>
+                <input id="owner" name="owner" type="text" placeholder="VD: Thanh / SA Team" />
+              </div>
+
+              <div class="field">
+                <label for="due_date">Due Date</label>
+                <input id="due_date" name="due_date" type="date" />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" id="create-project-btn" type="submit">Create Project</button>
+              <div id="create-project-message" class="form-message"></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-main" style="margin-top: 18px;">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Workload</h2>
+            <p class="panel-subtitle">Active tasks theo owner.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="workload-list" class="workload-list"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Approval Queue</h2>
+            <p class="panel-subtitle">Các approval đang chờ xử lý.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="approval-list" class="approval-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-main" style="margin-top: 18px;">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Risk / Blocker Heatmap</h2>
+            <p class="panel-subtitle">Tổng hợp rủi ro và blocker từ D1.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="heatmap-list" class="heatmap-list"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Quick Actions</h2>
+            <p class="panel-subtitle">Các thao tác test giao diện.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <button class="btn" data-action="refresh" type="button">Refresh All</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+      <div class="panel-header">
         <div>
-          <div class="panel-head"><h2>Workload</h2></div>
-          <div id="workloadList" class="list"></div>
+          <h2 class="panel-title">Kanban Overview</h2>
+          <p class="panel-subtitle">Nhóm project theo stage để kiểm tra lifecycle.</p>
         </div>
-        <div>
-          <div class="panel-head"><h2>Risk / Blocker Heatmap</h2></div>
-          <div id="heatmapList" class="list"></div>
-        </div>
-      </section>
+      </div>
+      <div class="panel-body">
+        <div id="kanban-board" class="kanban-board"></div>
+      </div>
     </section>
 
-    <section class="grid-2">
-      <section class="panel">
-        <div class="panel-head"><h2>Kanban Snapshot</h2></div>
-        <div class="kanban" id="kanbanBoard"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head"><h2>Pending Approvals</h2></div>
-        <div id="approvalList" class="list"></div>
-      </section>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h2>Create Project</h2></div>
-      <form id="projectForm" class="form-grid">
-        <input name="name" placeholder="Project name" required />
-        <input name="customer_name" placeholder="Customer" />
-        <select name="type">
-          <option value="delivery">Delivery</option>
-          <option value="presales">Presales</option>
-          <option value="internal">Internal</option>
-          <option value="review">Review</option>
-        </select>
-        <select name="stage">
-          <option value="intake">Intake</option>
-          <option value="design_review">Design Review</option>
-          <option value="quotation">Quotation</option>
-          <option value="implementation">Implementation</option>
-          <option value="handover">Handover</option>
-        </select>
-        <select name="priority">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
-        </select>
-        <input name="due_date" type="date" />
-        <input name="design_review_due_at" type="datetime-local" />
-        <textarea name="description" placeholder="Description"></textarea>
-        <button type="submit">Create Project</button>
-      </form>
-      <div id="formStatus" class="status"></div>
-    </section>
-  </main>
+    <div class="footer-note">
+      Frontend GitHub Pages + Backend Cloudflare Worker + D1/KV/Queue
+    </div>
+  </div>
 
   <script src="./config.js"></script>
   <script src="./app.js"></script>
