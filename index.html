@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyber Solution Delivery Platform v2</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">CTEL • Solution Architect Cyber Security</div>
+      <h1>Cyber Solution Delivery Platform</h1>
+      <p>Health scoring, workload, approval queue, and CTEL delivery rules</p>
+    </div>
+    <div class="actions">
+      <button id="refreshBtn">Refresh</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="cards" id="summaryCards"></section>
+
+    <section class="grid-2">
+      <section class="panel">
+        <div class="panel-head"><h2>Project Control Tower</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th><th>Name</th><th>Customer</th><th>Stage</th><th>Status</th><th>Health</th><th>Due</th><th>Owner</th>
+              </tr>
+            </thead>
+            <tbody id="projectRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel stack">
+        <div>
+          <div class="panel-head"><h2>Workload</h2></div>
+          <div id="workloadList" class="list"></div>
+        </div>
+        <div>
+          <div class="panel-head"><h2>Risk / Blocker Heatmap</h2></div>
+          <div id="heatmapList" class="list"></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="grid-2">
+      <section class="panel">
+        <div class="panel-head"><h2>Kanban Snapshot</h2></div>
+        <div class="kanban" id="kanbanBoard"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Pending Approvals</h2></div>
+        <div id="approvalList" class="list"></div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Create Project</h2></div>
+      <form id="projectForm" class="form-grid">
+        <input name="name" placeholder="Project name" required />
+        <input name="customer_name" placeholder="Customer" />
+        <select name="type">
+          <option value="delivery">Delivery</option>
+          <option value="presales">Presales</option>
+          <option value="internal">Internal</option>
+          <option value="review">Review</option>
+        </select>
+        <select name="stage">
+          <option value="intake">Intake</option>
+          <option value="design_review">Design Review</option>
+          <option value="quotation">Quotation</option>
+          <option value="implementation">Implementation</option>
+          <option value="handover">Handover</option>
+        </select>
+        <select name="priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+        <input name="due_date" type="date" />
+        <input name="design_review_due_at" type="datetime-local" />
+        <textarea name="description" placeholder="Description"></textarea>
+        <button type="submit">Create Project</button>
+      </form>
+      <div id="formStatus" class="status"></div>
+    </section>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
