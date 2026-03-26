@@ -4,7 +4,8 @@
   --panel: rgba(18, 27, 44, 0.92);
   --panel-2: rgba(22, 35, 58, 0.95);
   --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(96, 165, 250, 0.2);
+  --line-strong: rgba(96, 165, 250, 0.28);
+  --line-active: rgba(34, 211, 238, 0.45);
   --text: #eef4ff;
   --muted: #93a6c6;
   --accent: #60a5fa;
@@ -79,10 +80,24 @@ body {
 .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:16px; }
 .panel-head h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: -0.02em; }
 .panel-head p { margin:0; font-size: 13px; }
+.filters-grid {
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 14px;
+  align-items:end;
+}
+.filter-actions { display:flex; align-items:end; justify-content:flex-end; }
 .project-list, .experts-grid, .list-stack, .insight-list { display:grid; gap:14px; }
 .project-card, .expert-card, .list-item, .insight-card {
   border: 1px solid var(--line); border-radius: 18px; padding: 15px;
   background: rgba(255,255,255,0.035);
+  transition: transform .15s ease, border-color .15s ease, opacity .15s ease, box-shadow .15s ease;
+}
+.project-card.project-dimmed, .kanban-card.kanban-dimmed { opacity: .44; }
+.project-card.project-highlighted, .kanban-card.kanban-highlighted {
+  border-color: var(--line-active);
+  box-shadow: 0 0 0 1px rgba(34,211,238,.18), 0 10px 24px rgba(34,211,238,.08);
+  transform: translateY(-1px);
 }
 .project-card__header, .expert-card__top, .list-item, .insight-card__top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
 .project-code, .expert-code {
@@ -113,6 +128,12 @@ input::placeholder { color: #7f8aa3; }
 .form-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top: 2px; }
 .form-status { font-size: 14px; color: var(--muted); }
 .experts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.expert-card { cursor: pointer; }
+.expert-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.expert-card.is-active {
+  border-color: var(--line-active);
+  box-shadow: 0 0 0 1px rgba(34,211,238,.18), 0 14px 32px rgba(34,211,238,.08);
+}
 .expert-card__top { align-items:center; }
 .expert-identity { display:flex; align-items:center; gap:12px; }
 .expert-avatar {
@@ -123,6 +144,12 @@ input::placeholder { color: #7f8aa3; }
 .expert-avatar img { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
 .expert-role { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .expert-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-2); font-weight: 800; }
+.expert-projects {
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;
+}
+.expert-project-chip {
+  padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.06); font-size: 12px; color: #dbe7ff;
+}
 .list-item__title { color: var(--text); font-weight: 700; }
 .list-item__value { color: var(--accent-2); font-weight: 800; font-size: 18px; }
 .insight-list { grid-template-columns: 1fr; }
@@ -138,6 +165,7 @@ input::placeholder { color: #7f8aa3; }
 .kanban-cards { display:grid; gap:10px; }
 .kanban-card {
   border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,0.04);
+  transition: transform .15s ease, opacity .15s ease, border-color .15s ease;
 }
 .kanban-card strong { display:block; margin-bottom: 6px; }
 .pixel-panel { padding-bottom: 20px; }
@@ -160,6 +188,10 @@ input::placeholder { color: #7f8aa3; }
 .pixel-roster-item {
   border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: rgba(255,255,255,0.04);
 }
+.pixel-roster-item.is-active {
+  border-color: var(--line-active);
+  box-shadow: 0 0 0 1px rgba(34,211,238,.16) inset;
+}
 .pixel-roster-item__name {
   font-family: "VT323", monospace; font-size: 24px; color: #f4fbff; letter-spacing: .03em;
 }
@@ -170,7 +202,8 @@ input::placeholder { color: #7f8aa3; }
 }
 @media (max-width: 1280px) {
   .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .hero-grid, .split-grid, .pixel-layout { grid-template-columns: 1fr; }
+  .hero-grid, .split-grid, .pixel-layout, .filters-grid { grid-template-columns: 1fr; }
+  .filter-actions { justify-content: flex-start; }
 }
 @media (max-width: 900px) {
   .experts-grid { grid-template-columns: 1fr; }
