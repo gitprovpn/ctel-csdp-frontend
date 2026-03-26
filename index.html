@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cyber Solution Delivery Platform v2.2</title>
+  <title>Cyber Solution Delivery Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="eyebrow">CTEL • Solution Architect Cyber Security • v2.2</div>
+        <div class="eyebrow">CTEL • Solution Architect Cyber Security</div>
         <h1>Cyber Solution Delivery Platform</h1>
         <p>Control tower theo dõi tiến độ, health score, workload và đội chuyên gia đang trực tiếp phụ trách từng dự án.</p>
       </div>
@@ -25,48 +25,48 @@
     <div id="appStatus" class="status-banner" data-state="idle">Sẵn sàng.</div>
 
     <main class="container">
-      <section class="cards" id="summaryCards"></section>
+      <!-- <section class="cards" id="summaryCards"></section> -->
 
-      <section class="panel filters-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Project Filters</h2>
-            <p>Lọc theo loại dự án, stage, health status và tìm nhanh theo project code hoặc project name.</p>
-          </div>
-          <div id="searchResultMeta" class="subtext">All projects</div>
-        </div>
-        <div class="filters-grid filters-grid-v22">
-          <div class="field field-search">
-            <label for="filterSearch">Search Project</label>
-            <input id="filterSearch" type="text" placeholder="VD: CTEL-SA-2026-002 hoặc Secure SD-WAN" />
-          </div>
-          <div class="field">
-            <label for="filterProjectType">Project Type</label>
-            <select id="filterProjectType">
-              <option value="all">All</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="filterStage">Stage</label>
-            <select id="filterStage">
-              <option value="all">All</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="filterHealth">Health Status</label>
-            <select id="filterHealth">
-              <option value="all">All</option>
-              <option value="on_track">on_track</option>
-              <option value="at_risk">at_risk</option>
-              <option value="delayed">delayed</option>
-              <option value="blocked">blocked</option>
-            </select>
-          </div>
-          <div class="filter-actions">
-            <button id="resetFiltersBtn" class="btn" type="button">Reset Filters</button>
-          </div>
-        </div>
-      </section>
+      <!-- <section class="panel filters-panel"> -->
+        <!-- <div class="panel-head"> -->
+          <!-- <div> -->
+            <!-- <h2>Project Filters</h2> -->
+            <!-- <p>Lọc theo loại dự án, stage, health status và tìm nhanh theo project code hoặc project name.</p> -->
+          <!-- </div> -->
+          <!-- <div id="searchResultMeta" class="subtext">All projects</div> -->
+        <!-- </div> -->
+        <!-- <div class="filters-grid filters-grid-v22"> -->
+          <!-- <div class="field field-search"> -->
+            <!-- <label for="filterSearch">Search Project</label> -->
+            <!-- <input id="filterSearch" type="text" placeholder="VD: CTEL-SA-2026-002 hoặc Secure SD-WAN" /> -->
+          <!-- </div> -->
+          <!-- <div class="field"> -->
+            <!-- <label for="filterProjectType">Project Type</label> -->
+            <!-- <select id="filterProjectType"> -->
+              <!-- <option value="all">All</option> -->
+            <!-- </select> -->
+          <!-- </div> -->
+          <!-- <div class="field"> -->
+            <!-- <label for="filterStage">Stage</label> -->
+            <!-- <select id="filterStage"> -->
+              <!-- <option value="all">All</option> -->
+            <!-- </select> -->
+          <!-- </div> -->
+          <!-- <div class="field"> -->
+            <!-- <label for="filterHealth">Health Status</label> -->
+            <!-- <select id="filterHealth"> -->
+              <!-- <option value="all">All</option> -->
+              <!-- <option value="on_track">on_track</option> -->
+              <!-- <option value="at_risk">at_risk</option> -->
+              <!-- <option value="delayed">delayed</option> -->
+              <!-- <option value="blocked">blocked</option> -->
+            <!-- </select> -->
+          <!-- </div> -->
+          <!-- <div class="filter-actions"> -->
+            <!-- <button id="resetFiltersBtn" class="btn" type="button">Reset Filters</button> -->
+          <!-- </div> -->
+        <!-- </div> -->
+      <!-- </section> -->
 
       <section class="content-grid hero-grid">
         <section class="panel panel-projects">
@@ -80,61 +80,61 @@
           <div id="projectList" class="project-list"></div>
         </section>
 
-        <section class="panel panel-form">
-          <div class="panel-head">
-            <div>
-              <h2>Create Project</h2>
-              <p>Tạo nhanh dự án mới để test end-to-end trên Worker + D1.</p>
-            </div>
-          </div>
-          <form id="projectForm" class="form-grid">
-            <div class="field">
-              <label for="project_code">Project Code</label>
-              <input id="project_code" name="project_code" placeholder="CTEL-SA-2026-003" />
-            </div>
-            <div class="field field-span-2">
-              <label for="project_name">Project Name</label>
-              <input id="project_name" name="project_name" placeholder="VD: Customer Zero Trust Readiness" required />
-            </div>
-            <div class="field">
-              <label for="project_type">Project Type</label>
-              <select id="project_type" name="project_type">
-                <option value="presales">Presales</option>
-                <option value="delivery">Delivery</option>
-                <option value="review">Review</option>
-                <option value="handover">Handover</option>
-                <option value="GENERAL">General</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="stage">Stage</label>
-              <select id="stage" name="stage">
-                <option value="intake">Intake</option>
-                <option value="analysis">Analysis</option>
-                <option value="design_review">Design Review</option>
-                <option value="review">Review</option>
-                <option value="approval">Approval</option>
-                <option value="execution">Execution</option>
-                <option value="validation">Validation</option>
-                <option value="handover">Handover</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="owner">Owner</label>
-              <input id="owner" name="owner" placeholder="VD: Phúc" />
-            </div>
-            <div class="field">
-              <label for="due_date">Due Date</label>
-              <input id="due_date" name="due_date" type="date" />
-            </div>
-            <div class="form-actions field-span-2">
-              <button type="submit" class="btn btn-primary" id="createProjectBtn">Create Project</button>
-              <div id="formStatus" class="form-status"></div>
-            </div>
-          </form>
-        </section>
-      </section>
+        <!-- <section class="panel panel-form"> -->
+          <!-- <div class="panel-head"> -->
+            <!-- <div> -->
+              <!-- <h2>Create Project</h2> -->
+              <!-- <p>Tạo nhanh dự án mới để test end-to-end trên Worker + D1.</p> -->
+            <!-- </div> -->
+          <!-- </div> -->
+          <!-- <form id="projectForm" class="form-grid"> -->
+            <!-- <div class="field"> -->
+              <!-- <label for="project_code">Project Code</label> -->
+              <!-- <input id="project_code" name="project_code" placeholder="CTEL-SA-2026-003" /> -->
+            <!-- </div> -->
+            <!-- <div class="field field-span-2"> -->
+              <!-- <label for="project_name">Project Name</label> -->
+              <!-- <input id="project_name" name="project_name" placeholder="VD: Customer Zero Trust Readiness" required /> -->
+            <!-- </div> -->
+            <!-- <div class="field"> -->
+              <!-- <label for="project_type">Project Type</label> -->
+              <!-- <select id="project_type" name="project_type"> -->
+                <!-- <option value="presales">Presales</option> -->
+                <!-- <option value="delivery">Delivery</option> -->
+                <!-- <option value="review">Review</option> -->
+                <!-- <option value="handover">Handover</option> -->
+                <!-- <option value="GENERAL">General</option> -->
+              <!-- </select> -->
+            <!-- </div> -->
+            <!-- <div class="field"> -->
+              <!-- <label for="stage">Stage</label> -->
+              <!-- <select id="stage" name="stage"> -->
+                <!-- <option value="intake">Intake</option> -->
+                <!-- <option value="analysis">Analysis</option> -->
+                <!-- <option value="design_review">Design Review</option> -->
+                <!-- <option value="review">Review</option> -->
+                <!-- <option value="approval">Approval</option> -->
+                <!-- <option value="execution">Execution</option> -->
+                <!-- <option value="validation">Validation</option> -->
+                <!-- <option value="handover">Handover</option> -->
+                <!-- <option value="closed">Closed</option> -->
+              <!-- </select> -->
+            <!-- </div> -->
+            <!-- <div class="field"> -->
+              <!-- <label for="owner">Owner</label> -->
+              <!-- <input id="owner" name="owner" placeholder="VD: Phúc" /> -->
+            <!-- </div> -->
+            <!-- <div class="field"> -->
+              <!-- <label for="due_date">Due Date</label> -->
+              <!-- <input id="due_date" name="due_date" type="date" /> -->
+            <!-- </div> -->
+            <!-- <div class="form-actions field-span-2"> -->
+              <!-- <button type="submit" class="btn btn-primary" id="createProjectBtn">Create Project</button> -->
+              <!-- <div id="formStatus" class="form-status"></div> -->
+            <!-- </div> -->
+          <!-- </form> -->
+        <!-- </section> -->
+      <!-- </section> -->
 
       <section class="content-grid split-grid">
         <section class="panel">
@@ -148,38 +148,38 @@
           <div id="expertsBoard" class="experts-grid"></div>
         </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Ops Insights</h2>
-              <p>Điểm nổi bật cần chú ý ngay trong ngày.</p>
-            </div>
-          </div>
-          <div id="overviewNotes" class="insight-list"></div>
-        </section>
-      </section>
+        <!-- <section class="panel"> -->
+          <!-- <div class="panel-head"> -->
+            <!-- <div> -->
+              <!-- <h2>Ops Insights</h2> -->
+              <!-- <p>Điểm nổi bật cần chú ý ngay trong ngày.</p> -->
+            <!-- </div> -->
+          <!-- </div> -->
+          <!-- <div id="overviewNotes" class="insight-list"></div> -->
+        <!-- </section> -->
+      <!-- </section> -->
 
-      <section class="content-grid split-grid">
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Workload</h2>
-              <p>Số lượng active tasks theo owner.</p>
-            </div>
-          </div>
-          <div id="workloadList" class="list-stack"></div>
-        </section>
+      <!-- <section class="content-grid split-grid"> -->
+        <!-- <section class="panel"> -->
+          <!-- <div class="panel-head"> -->
+            <!-- <div> -->
+              <!-- <h2>Workload</h2> -->
+              <!-- <p>Số lượng active tasks theo owner.</p> -->
+            <!-- </div> -->
+          <!-- </div> -->
+          <!-- <div id="workloadList" class="list-stack"></div> -->
+        <!-- </section> -->
 
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Pending Approvals</h2>
-              <p>Các approval đang chờ xử lý.</p>
-            </div>
-          </div>
-          <div id="approvalList" class="list-stack"></div>
-        </section>
-      </section>
+        <!-- <section class="panel"> -->
+          <!-- <div class="panel-head"> -->
+            <!-- <div> -->
+              <!-- <h2>Pending Approvals</h2> -->
+              <!-- <p>Các approval đang chờ xử lý.</p> -->
+            <!-- </div> -->
+          <!-- </div> -->
+          <!-- <div id="approvalList" class="list-stack"></div> -->
+        <!-- </section> -->
+      <!-- </section> -->
 
       <section class="content-grid split-grid">
         <section class="panel">
@@ -192,16 +192,16 @@
           <div id="heatmapList" class="list-stack"></div>
         </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Kanban Overview</h2>
-              <p>Tự xuống dòng theo màn hình, không scroll ngang.</p>
-            </div>
-          </div>
-          <div id="kanbanBoard" class="kanban-board"></div>
-        </section>
-      </section>
+        <!-- <section class="panel"> -->
+          <!-- <div class="panel-head"> -->
+            <!-- <div> -->
+              <!-- <h2>Kanban Overview</h2> -->
+              <!-- <p>Tự xuống dòng theo màn hình, không scroll ngang.</p> -->
+            <!-- </div> -->
+          <!-- </div> -->
+          <!-- <div id="kanbanBoard" class="kanban-board"></div> -->
+        <!-- </section> -->
+      <!-- </section> -->
 
       <section class="panel pixel-panel">
         <div class="panel-head pixel-head">
