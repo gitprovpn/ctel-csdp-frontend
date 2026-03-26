@@ -636,6 +636,7 @@
   }
 
   function renderWorkload(workload) {
+    if (!el.workloadList) return;
     if (!workload.length) {
       el.workloadList.innerHTML = '<div class="empty-state">Chưa có dữ liệu workload.</div>';
       return;
@@ -654,6 +655,7 @@
   }
 
   function renderApprovals(approvals) {
+    if (!el.approvalList) return;
     if (!approvals.length) {
       el.approvalList.innerHTML = '<div class="empty-state">Không có approval đang chờ.</div>';
       return;
@@ -675,6 +677,7 @@
   }
 
   function renderHeatmap(heatmap) {
+    if (!el.heatmapList) return;
     if (!heatmap.length) {
       el.heatmapList.innerHTML = '<div class="empty-state">Chưa có dữ liệu heatmap.</div>';
       return;
@@ -693,6 +696,7 @@
   }
 
   function renderInsights(projects, workload, approvals) {
+    if (!el.overviewNotes) return;
     const sortedProjects = projects.slice().sort((a, b) => healthRank(a) - healthRank(b) || a.health_score - b.health_score);
     const riskyProject = sortedProjects[0] || null;
     const busiestOwner = workload.slice().sort((a, b) => Number(b.active_tasks || 0) - Number(a.active_tasks || 0))[0] || null;
@@ -737,6 +741,7 @@
   }
 
   function renderKanban(projects) {
+    if (!el.kanbanBoard) return;
     const stages = ["intake", "analysis", "design_review", "review", "approval", "execution", "validation", "handover", "closed"];
     const groups = new Map(stages.map((stage) => [stage, []]));
     projects.forEach((project) => {
@@ -820,25 +825,42 @@
 
   function drawBubble(ctx, x, y, width, text, color) {
     const bubbleX = x - width / 2;
-    const bubbleY = y - 62;
-    ctx.fillStyle = "rgba(6, 16, 29, 0.92)";
+    const bubbleY = y - 82;
+    ctx.fillStyle = "rgba(6, 16, 29, 0.96)";
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(bubbleX, bubbleY, width, 28, 8);
+    ctx.roundRect(bubbleX, bubbleY, width, 24, 8);
     ctx.fill();
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x - 6, bubbleY + 28);
-    ctx.lineTo(x, bubbleY + 36);
-    ctx.lineTo(x + 6, bubbleY + 28);
+    ctx.moveTo(x - 5, bubbleY + 24);
+    ctx.lineTo(x, bubbleY + 30);
+    ctx.lineTo(x + 5, bubbleY + 24);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "#f3f8ff";
-    ctx.font = "16px VT323";
+    ctx.font = "15px VT323";
     ctx.textAlign = "center";
-    ctx.fillText(text, x, bubbleY + 18);
+    ctx.fillText(text, x, bubbleY + 16);
+  }
+
+  function drawNameplate(ctx, x, y, text, color, active) {
+    const width = Math.max(44, text.length * 9 + 12);
+    const plateX = x - width / 2;
+    const plateY = y + 10;
+    ctx.fillStyle = active ? "rgba(8, 18, 34, 0.96)" : "rgba(8, 18, 34, 0.88)";
+    ctx.strokeStyle = active ? color : "rgba(255,255,255,0.18)";
+    ctx.lineWidth = active ? 2 : 1.5;
+    ctx.beginPath();
+    ctx.roundRect(plateX, plateY, width, 18, 7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#f3f8ff";
+    ctx.font = "14px VT323";
+    ctx.textAlign = "center";
+    ctx.fillText(text, x, plateY + 12);
   }
 
   function drawSprite(ctx, assets, x, y, bobOffset = 0) {
@@ -938,13 +960,9 @@
         ctx.stroke();
       }
 
-      ctx.fillStyle = expert.color;
-      ctx.font = "20px VT323";
-      ctx.textAlign = "center";
-      ctx.fillText(expert.name.toUpperCase(), point.x, point.y - 58);
-
-      const bubbleText = expert.focusProject ? expert.focusProject.code : "STANDBY";
-      drawBubble(ctx, point.x, point.y - 2, Math.max(100, bubbleText.length * 10), bubbleText, expert.color);
+      const bubbleText = expert.focusProject ? abbreviateProjectCode(expert.focusProject.code) : "STBY";
+      drawBubble(ctx, point.x, point.y - 2, Math.max(52, bubbleText.length * 10 + 8), bubbleText, expert.color);
+      drawNameplate(ctx, point.x, point.y, expert.name.toUpperCase(), expert.color, isActive);
 
       state.pixelHitRegions.push({
         type: "expert",
@@ -956,7 +974,7 @@
       });
     });
 
-    el.pixelRoster.innerHTML = state.expertAssignments
+    if (el.pixelRoster) el.pixelRoster.innerHTML = state.expertAssignments
       .map(
         (expert) => `
           <div class="pixel-roster-item ${state.selectedExpertId === expert.id ? "is-active" : ""}" data-expert-id="${expert.id}">
@@ -968,7 +986,7 @@
       )
       .join("");
 
-    el.pixelRoster.querySelectorAll("[data-expert-id]").forEach((item) => {
+    el.pixelRoster?.querySelectorAll("[data-expert-id]").forEach((item) => {
       item.addEventListener("click", () => {
         const expertId = item.dataset.expertId;
         const record = getExpertById(expertId);
@@ -988,6 +1006,7 @@
   }
 
   function renderFilters() {
+    if (!el.filterProjectType && !el.filterStage && !el.filterOwner && !el.filterHealth && !el.filterSearch) return;
     const projects = state.projects;
     const types = [...new Set(projects.map((p) => p.type))].sort();
     const stages = [...new Set(projects.map((p) => p.stage))].sort();
