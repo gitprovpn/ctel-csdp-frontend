@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cyber Solution Delivery Platform v2.1</title>
+  <title>Cyber Solution Delivery Platform v2.2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="eyebrow">CTEL • Solution Architect Cyber Security • v2.1</div>
+        <div class="eyebrow">CTEL • Solution Architect Cyber Security • v2.2</div>
         <h1>Cyber Solution Delivery Platform</h1>
         <p>Control tower theo dõi tiến độ, health score, workload và đội chuyên gia đang trực tiếp phụ trách từng dự án.</p>
       </div>
@@ -31,10 +31,15 @@
         <div class="panel-head">
           <div>
             <h2>Project Filters</h2>
-            <p>Lọc nhanh theo loại dự án, stage và health status. Click chuyên gia để highlight project họ đang handle.</p>
+            <p>Lọc theo loại dự án, stage, health status và tìm nhanh theo project code hoặc project name.</p>
           </div>
+          <div id="searchResultMeta" class="subtext">All projects</div>
         </div>
-        <div class="filters-grid">
+        <div class="filters-grid filters-grid-v22">
+          <div class="field field-search">
+            <label for="filterSearch">Search Project</label>
+            <input id="filterSearch" type="text" placeholder="VD: CTEL-SA-2026-002 hoặc Secure SD-WAN" />
+          </div>
           <div class="field">
             <label for="filterProjectType">Project Type</label>
             <select id="filterProjectType">
@@ -68,7 +73,7 @@
           <div class="panel-head">
             <div>
               <h2>Project Control Tower</h2>
-              <p>Trạng thái vận hành dự án và health scoring theo business rules.</p>
+              <p>Click project để focus ngược lại chuyên gia đang handle và đồng bộ sang Pixel Operations Floor.</p>
             </div>
             <div id="projectCounter" class="subtext">0 project</div>
           </div>
@@ -136,7 +141,7 @@
           <div class="panel-head">
             <div>
               <h2>Expert Dispatch Board</h2>
-              <p>Click vào chuyên gia để highlight các project đang phụ trách.</p>
+              <p>Click vào chuyên gia để highlight project đang phụ trách. Click project cũng sẽ focus lại chuyên gia tương ứng.</p>
             </div>
             <div id="activeExpertBadge" class="subtext">No expert selected</div>
           </div>
@@ -202,9 +207,9 @@
         <div class="panel-head pixel-head">
           <div>
             <h2>Pixel Operations Floor</h2>
-            <p>Khu vực mô phỏng đội chuyên gia đang di chuyển nhẹ giữa các zone theo assignment thực tế.</p>
+            <p>Khu vực mô phỏng đội chuyên gia đang patrol giữa nhiều zone theo assignment thực tế.</p>
           </div>
-          <div class="pixel-legend">Pixel Interface • Live Assignment View • Animated</div>
+          <div class="pixel-legend">Pixel Interface • Live Assignment View • Patrol Route</div>
         </div>
         <div class="pixel-layout">
           <div class="pixel-canvas-wrap">

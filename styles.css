@@ -200,9 +200,32 @@ input::placeholder { color: #7f8aa3; }
 .empty-state {
   border: 1px dashed rgba(255,255,255,.16); border-radius: 14px; padding: 14px; color: var(--muted); text-align:center; font-size:14px;
 }
+
+.filters-grid-v22 {
+  grid-template-columns: minmax(240px, 1.2fr) repeat(3, minmax(0, 1fr)) auto;
+}
+.field-search input {
+  padding-left: 14px;
+}
+.project-card {
+  cursor: pointer;
+}
+.project-card:hover,
+.kanban-card:hover {
+  border-color: var(--line-strong);
+}
+.project-card.project-focused,
+.kanban-card.kanban-focused {
+  border-color: rgba(167, 139, 250, 0.58);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2), 0 16px 30px rgba(167, 139, 250, 0.10);
+}
+.search-result-hit {
+  color: var(--accent-2);
+}
+
 @media (max-width: 1280px) {
   .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .hero-grid, .split-grid, .pixel-layout, .filters-grid { grid-template-columns: 1fr; }
+  .hero-grid, .split-grid, .pixel-layout, .filters-grid, .filters-grid-v22 { grid-template-columns: 1fr; }
   .filter-actions { justify-content: flex-start; }
 }
 @media (max-width: 900px) {

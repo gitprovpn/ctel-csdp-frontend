@@ -12,17 +12,17 @@
       specialties: ["handover", "validation", "closed"],
       spriteKey: "phuc",
       color: "#22c55e",
-      basePos: { x: 750, y: 300 },
+      idlePos: { x: 760, y: 292 },
     },
     {
       id: "thanh",
       name: "Thanh",
       role: "Lead Solution Architect",
       tag: "presales",
-      specialties: ["presales", "analysis", "design_review", "design"],
+      specialties: ["presales", "analysis", "design_review", "design", "intake"],
       spriteKey: "minh",
       color: "#22d3ee",
-      basePos: { x: 210, y: 355 },
+      idlePos: { x: 190, y: 350 },
     },
     {
       id: "tuan",
@@ -32,7 +32,7 @@
       specialties: ["delivery", "execution", "implementation", "validation"],
       spriteKey: "linh",
       color: "#60a5fa",
-      basePos: { x: 390, y: 340 },
+      idlePos: { x: 395, y: 340 },
     },
     {
       id: "phu",
@@ -42,7 +42,7 @@
       specialties: ["review", "approval", "design_review"],
       spriteKey: "nam",
       color: "#a78bfa",
-      basePos: { x: 555, y: 336 },
+      idlePos: { x: 550, y: 338 },
     },
     {
       id: "an",
@@ -52,7 +52,7 @@
       specialties: ["approval", "at_risk", "blocked"],
       spriteKey: "vy",
       color: "#f59e0b",
-      basePos: { x: 680, y: 352 },
+      idlePos: { x: 650, y: 338 },
     },
   ];
 
@@ -63,18 +63,18 @@
   };
 
   const ZONES = {
-    intake: { x: 160, y: 360 },
-    analysis: { x: 250, y: 350 },
-    design_review: { x: 335, y: 335 },
-    design: { x: 335, y: 335 },
-    review: { x: 470, y: 335 },
-    approval: { x: 610, y: 340 },
-    execution: { x: 510, y: 390 },
-    implementation: { x: 510, y: 390 },
-    validation: { x: 690, y: 385 },
-    handover: { x: 780, y: 315 },
-    closed: { x: 808, y: 250 },
-    idle: { x: 140, y: 250 },
+    intake: { x: 165, y: 360 },
+    analysis: { x: 240, y: 348 },
+    design_review: { x: 325, y: 334 },
+    design: { x: 335, y: 334 },
+    review: { x: 455, y: 333 },
+    approval: { x: 610, y: 336 },
+    execution: { x: 500, y: 388 },
+    implementation: { x: 500, y: 388 },
+    validation: { x: 694, y: 381 },
+    handover: { x: 778, y: 315 },
+    closed: { x: 807, y: 248 },
+    idle: { x: 120, y: 250 },
   };
 
   const state = {
@@ -86,7 +86,9 @@
     expertAssignments: [],
     pixelAssets: null,
     selectedExpertId: null,
+    focusedProjectId: null,
     filters: {
+      search: "",
       projectType: "all",
       stage: "all",
       healthStatus: "all",
@@ -110,11 +112,13 @@
     formStatus: document.getElementById("formStatus"),
     appStatus: document.getElementById("appStatus"),
     refreshBtn: document.getElementById("refreshBtn"),
+    filterSearch: document.getElementById("filterSearch"),
     filterProjectType: document.getElementById("filterProjectType"),
     filterStage: document.getElementById("filterStage"),
     filterHealth: document.getElementById("filterHealth"),
     resetFiltersBtn: document.getElementById("resetFiltersBtn"),
     projectCounter: document.getElementById("projectCounter"),
+    searchResultMeta: document.getElementById("searchResultMeta"),
     activeExpertBadge: document.getElementById("activeExpertBadge"),
   };
 
@@ -149,7 +153,7 @@
     return map[String(project?.health_status || "on_track")] ?? 4;
   }
 
-  function fetchJson(path, options = {}) {
+  async function fetchJson(path, options = {}) {
     const url = `${API_BASE}${path}`;
     const headers = { ...(options.headers || {}) };
     let body = options.body;
@@ -159,28 +163,29 @@
       body = JSON.stringify(body);
     }
 
-    return fetch(url, {
+    const response = await fetch(url, {
       method: options.method || "GET",
       headers,
       body,
-    }).then(async (response) => {
-      const text = await response.text();
-      let data;
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch (err) {
-        throw new Error(`API không trả JSON hợp lệ (${response.status})`);
-      }
-      if (!response.ok) {
-        throw new Error((data && (data.error || data.message)) || `HTTP ${response.status}`);
-      }
-      return data;
     });
+    const text = await response.text();
+    let data;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (err) {
+      throw new Error(`API không trả JSON hợp lệ (${response.status})`);
+    }
+
+    if (!response.ok) {
+      throw new Error((data && (data.error || data.message)) || `HTTP ${response.status}`);
+    }
+    return data;
   }
 
   function normalizeProject(project) {
     return {
-      id: project.id,
+      id: Number(project.id),
       code: project.project_code || project.code || `PROJECT-${project.id}`,
       name: project.project_name || project.name || "Untitled Project",
       type: String(project.project_type || project.type || "GENERAL").toLowerCase(),
@@ -200,9 +205,14 @@
 
   function projectMatchesFilters(project) {
     const f = state.filters;
+    const search = String(f.search || "").trim().toLowerCase();
     if (f.projectType !== "all" && project.type !== f.projectType) return false;
     if (f.stage !== "all" && project.stage !== f.stage) return false;
     if (f.healthStatus !== "all" && project.health_status !== f.healthStatus) return false;
+    if (search) {
+      const haystack = `${project.code} ${project.name}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
     return true;
   }
 
@@ -221,13 +231,19 @@
     ];
 
     el.summaryCards.innerHTML = cards
-      .map(([label, value]) => `
+      .map(
+        ([label, value]) => `
         <article class="card">
           <div class="card-label">${escapeHtml(label)}</div>
           <div class="card-value">${escapeHtml(String(value))}</div>
         </article>
-      `)
+      `
+      )
       .join("");
+  }
+
+  function findExpertForProject(projectId) {
+    return state.expertAssignments.find((expert) => expert.projectIds.includes(Number(projectId))) || null;
   }
 
   function projectHandledBySelectedExpert(project) {
@@ -236,13 +252,19 @@
     return !!assignment && assignment.projectIds.includes(Number(project.id));
   }
 
+  function projectIsFocused(project) {
+    return state.focusedProjectId != null && Number(project.id) === Number(state.focusedProjectId);
+  }
+
   function renderProjects(projects) {
+    el.projectCounter.textContent = `${projects.length} project(s)`;
+    const searchLabel = state.filters.search ? `Filtered by “${state.filters.search}”` : "All projects";
+    if (el.searchResultMeta) el.searchResultMeta.innerHTML = `<span class="search-result-hit">${escapeHtml(searchLabel)}</span>`;
+
     if (!projects.length) {
       el.projectList.innerHTML = '<div class="empty-state">Không có project nào khớp bộ lọc hiện tại.</div>';
       return;
     }
-
-    el.projectCounter.textContent = `${projects.length} project(s)`;
 
     el.projectList.innerHTML = projects
       .map((project) => {
@@ -253,7 +275,10 @@
           `status-${project.health_status}`,
           isSelected ? "project-highlighted" : "",
           anySelected && !isSelected ? "project-dimmed" : "",
-        ].filter(Boolean).join(" ");
+          projectIsFocused(project) ? "project-focused" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
 
         return `
           <article class="${classes}" data-project-id="${project.id}">
@@ -281,6 +306,16 @@
         `;
       })
       .join("");
+
+    el.projectList.querySelectorAll("[data-project-id]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const projectId = Number(card.dataset.projectId);
+        const expert = findExpertForProject(projectId);
+        state.focusedProjectId = projectId;
+        state.selectedExpertId = expert ? expert.id : null;
+        syncDerivedViews();
+      });
+    });
   }
 
   function resolveProjectOwnerAssignment(project) {
@@ -289,148 +324,149 @@
     return EXPERTS.find((expert) => owner.includes(expert.name.toLowerCase())) || null;
   }
 
-  function findExpertForProject(project, expertUsage) {
-    const byOwner = resolveProjectOwnerAssignment(project);
-    if (byOwner) return byOwner;
+  function resolveProjectByRules(project) {
+    const ownerMatch = resolveProjectOwnerAssignment(project);
+    if (ownerMatch) return ownerMatch;
 
-    const candidates = EXPERTS.filter((expert) =>
-      expert.specialties.includes(project.type) || expert.specialties.includes(project.stage) || expert.specialties.includes(project.health_status)
-    );
+    const byType = EXPERTS.find((expert) => expert.specialties.includes(project.type));
+    if (byType) return byType;
 
-    const pool = candidates.length ? candidates : EXPERTS;
-    return pool
-      .slice()
-      .sort((a, b) => (expertUsage[a.id] || 0) - (expertUsage[b.id] || 0))[0];
-  }
+    const byStage = EXPERTS.find((expert) => expert.specialties.includes(project.stage));
+    if (byStage) return byStage;
 
+    const byHealth = EXPERTS.find((expert) => expert.specialties.includes(project.health_status));
+    if (byHealth) return byHealth;
 
-  function projectHandledBySelectedExpert(project) {
-    if (!state.selectedExpertId) return false;
-    const assignment = state.expertAssignments.find((expert) => expert.id === state.selectedExpertId);
-    return !!assignment && assignment.projectIds.includes(Number(project.id));
+    return EXPERTS[0];
   }
 
   function buildExpertAssignments(projects, workload, approvals) {
-    const usage = Object.fromEntries(EXPERTS.map((expert) => [expert.id, 0]));
-    const assignmentsByExpert = Object.fromEntries(EXPERTS.map((expert) => [expert.id, []]));
-    const projectPool = projects.slice().sort((a, b) => {
-      const byRank = healthRank(a) - healthRank(b);
-      if (byRank !== 0) return byRank;
-      return a.health_score - b.health_score;
+    const pendingApprovalCount = approvals.length;
+    const byExpert = new Map(
+      EXPERTS.map((expert) => [
+        expert.id,
+        {
+          ...expert,
+          projectIds: [],
+          projects: [],
+          activeTasks: 0,
+          pendingApprovals: 0,
+          focusProject: null,
+          focusText: "Monitoring queue",
+          patrolRoute: [expert.idlePos],
+        },
+      ])
+    );
+
+    projects.forEach((project) => {
+      const expert = resolveProjectByRules(project);
+      const record = byExpert.get(expert.id);
+      record.projectIds.push(Number(project.id));
+      record.projects.push(project);
     });
 
-    for (const project of projectPool) {
-      const expert = findExpertForProject(project, usage);
-      assignmentsByExpert[expert.id].push(project);
-      usage[expert.id] += 1;
-    }
+    workload.forEach((item) => {
+      const owner = String(item.owner || "").toLowerCase();
+      const match = EXPERTS.find((expert) => owner.includes(expert.name.toLowerCase()));
+      if (match) {
+        byExpert.get(match.id).activeTasks = Number(item.active_tasks || 0);
+      }
+    });
 
-    return EXPERTS.map((expert, index) => {
-      const projectsForExpert = assignmentsByExpert[expert.id] || [];
-      const focusProject = projectsForExpert[0] || null;
-      const ownerRow = workload.find((item) => String(item.owner || "").toLowerCase().includes(expert.name.toLowerCase()));
-      const pendingCount = asArray(approvals).filter((item) => projectsForExpert.some((project) => Number(project.id) === Number(item.project_id))).length;
-      const zoneTarget = focusProject ? (ZONES[focusProject.stage] || ZONES.idle) : ZONES.idle;
+    const approvalOwners = new Map();
+    approvals.forEach((item) => {
+      const match = EXPERTS.find((expert) => String(item.approver || "").toLowerCase().includes(expert.name.toLowerCase()));
+      if (match) approvalOwners.set(match.id, (approvalOwners.get(match.id) || 0) + 1);
+    });
+
+    return Array.from(byExpert.values()).map((expert) => {
+      const sortedProjects = expert.projects.slice().sort((a, b) => healthRank(a) - healthRank(b));
+      const focusProject = sortedProjects[0] || null;
+      const targetZone = ZONES[focusProject?.stage] || expert.idlePos || ZONES.idle;
+      const route = buildPatrolRoute(targetZone, expert.idlePos);
       return {
         ...expert,
-        order: index,
-        projects: projectsForExpert,
-        projectIds: projectsForExpert.map((project) => Number(project.id)),
         focusProject,
-        focusText: focusProject ? `${focusProject.code} • ${focusProject.name}` : "Đang chờ assignment",
-        healthStatus: focusProject ? focusProject.health_status : "on_track",
-        activeTasks: Number(ownerRow?.active_tasks || 0),
-        pendingApprovals: pendingCount,
-        targetPos: zoneTarget,
+        pendingApprovals: approvalOwners.get(expert.id) || (expert.id === "an" ? pendingApprovalCount : 0),
+        focusText: focusProject
+          ? `${focusProject.code} • ${focusProject.stage} • ${focusProject.health_status}`
+          : `No direct assignment • standby`,
+        targetPos: targetZone,
+        patrolRoute: route,
       };
     });
   }
 
+  function buildPatrolRoute(target, idlePos) {
+    const base = target || idlePos || ZONES.idle;
+    const seed = idlePos || base;
+    return [
+      { x: seed.x, y: seed.y },
+      { x: base.x - 12, y: base.y + 4 },
+      { x: base.x + 10, y: base.y - 5 },
+      { x: base.x + 6, y: base.y + 8 },
+      { x: base.x - 8, y: base.y - 4 },
+    ];
+  }
+
   function renderExpertsBoard(assignments) {
-    const anySelected = !!state.selectedExpertId;
-    el.activeExpertBadge.textContent = anySelected
-      ? `Selected: ${assignments.find((item) => item.id === state.selectedExpertId)?.name || "-"}`
+    const activeLabel = state.selectedExpertId
+      ? `Focused expert: ${assignments.find((x) => x.id === state.selectedExpertId)?.name || "Unknown"}`
+      : state.focusedProjectId != null
+      ? `Focused project: #${state.focusedProjectId}`
       : "No expert selected";
+    el.activeExpertBadge.textContent = activeLabel;
 
     el.expertsBoard.innerHTML = assignments
       .map((expert) => {
-        const isActive = state.selectedExpertId === expert.id;
+        const isActive = expert.id === state.selectedExpertId;
+        const projectChips = expert.projects.length
+          ? expert.projects
+              .slice(0, 4)
+              .map((project) => `<span class="expert-project-chip">${escapeHtml(project.code)}</span>`)
+              .join("")
+          : '<span class="expert-project-chip">Idle</span>';
+
         return `
-          <article class="expert-card ${isActive ? "is-active" : ""}" data-expert-id="${escapeHtml(expert.id)}">
+          <article class="expert-card ${isActive ? "is-active" : ""}" data-expert-id="${expert.id}">
             <div class="expert-card__top">
               <div class="expert-identity">
                 <div class="expert-avatar">
                   <img src="./assets/pixel/experts/${escapeHtml(expert.spriteKey)}/body.png" alt="${escapeHtml(expert.name)}" />
                 </div>
                 <div>
-                  <div class="expert-code">${escapeHtml(expert.tag)}</div>
+                  <div class="expert-tag">${escapeHtml(expert.tag)}</div>
                   <div class="expert-name">${escapeHtml(expert.name)}</div>
                   <div class="expert-role">${escapeHtml(expert.role)}</div>
                 </div>
               </div>
-              <div class="type-chip">${escapeHtml(expert.healthStatus)}</div>
+              <div class="type-chip">${escapeHtml(expert.projects.length)} project</div>
             </div>
             <div class="expert-metrics">
-              <div><strong>Projects:</strong> ${expert.projects.length}</div>
-              <div><strong>Tasks:</strong> ${expert.activeTasks}</div>
-              <div><strong>Approvals:</strong> ${expert.pendingApprovals}</div>
-              <div><strong>Zone:</strong> ${escapeHtml(expert.focusProject ? expert.focusProject.stage : "idle")}</div>
+              <div><strong>Active tasks:</strong> ${escapeHtml(String(expert.activeTasks))}</div>
+              <div><strong>Pending approvals:</strong> ${escapeHtml(String(expert.pendingApprovals))}</div>
             </div>
             <div class="expert-focus">${escapeHtml(expert.focusText)}</div>
-            <div class="expert-projects">
-              ${expert.projects.length
-                ? expert.projects.map((project) => `<span class="expert-project-chip">${escapeHtml(project.code)}</span>`).join("")
-                : '<span class="expert-project-chip">Idle</span>'}
-            </div>
+            <div class="expert-projects">${projectChips}</div>
           </article>
         `;
       })
       .join("");
 
-    el.expertsBoard.querySelectorAll("[data-expert-id]").forEach((node) => {
-      node.addEventListener("click", () => {
-        const nextId = node.getAttribute("data-expert-id");
-        state.selectedExpertId = state.selectedExpertId === nextId ? null : nextId;
+    el.expertsBoard.querySelectorAll("[data-expert-id]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const expertId = card.dataset.expertId;
+        if (state.selectedExpertId === expertId) {
+          state.selectedExpertId = null;
+          state.focusedProjectId = null;
+        } else {
+          state.selectedExpertId = expertId;
+          const record = state.expertAssignments.find((item) => item.id === expertId);
+          state.focusedProjectId = record?.focusProject?.id ?? null;
+        }
         syncDerivedViews();
       });
     });
-  }
-
-  function renderInsights(projects, workload, approvals) {
-    const filtered = projects;
-    const riskiest = filtered.slice().sort((a, b) => healthRank(a) - healthRank(b) || a.health_score - b.health_score)[0] || null;
-    const busiest = workload.slice().sort((a, b) => Number(b.active_tasks || 0) - Number(a.active_tasks || 0))[0] || null;
-    const pending = approvals.length;
-
-    el.overviewNotes.innerHTML = [
-      {
-        title: "Project nguy hiểm nhất",
-        value: riskiest ? riskiest.code : "N/A",
-        body: riskiest ? `${riskiest.name} • ${riskiest.health_status} • score ${riskiest.health_score}` : "Chưa có dữ liệu",
-      },
-      {
-        title: "Owner quá tải nhất",
-        value: busiest ? busiest.owner : "N/A",
-        body: busiest ? `${busiest.active_tasks} active task(s)` : "Chưa có dữ liệu workload",
-      },
-      {
-        title: "Số approval đang pending",
-        value: pending,
-        body: pending ? "Cần ưu tiên xử lý trong ngày." : "Không có approval pending.",
-      },
-    ]
-      .map(
-        (item) => `
-          <article class="insight-card">
-            <div class="insight-card__top">
-              <div class="insight-title">${escapeHtml(item.title)}</div>
-              <div class="insight-value">${escapeHtml(String(item.value))}</div>
-            </div>
-            <div class="subtext">${escapeHtml(item.body)}</div>
-          </article>
-        `
-      )
-      .join("");
   }
 
   function renderWorkload(workload) {
@@ -438,6 +474,7 @@
       el.workloadList.innerHTML = '<div class="empty-state">Chưa có dữ liệu workload.</div>';
       return;
     }
+
     el.workloadList.innerHTML = workload
       .map(
         (item) => `
@@ -450,11 +487,33 @@
       .join("");
   }
 
+  function renderApprovals(approvals) {
+    if (!approvals.length) {
+      el.approvalList.innerHTML = '<div class="empty-state">Không có approval đang chờ.</div>';
+      return;
+    }
+
+    el.approvalList.innerHTML = approvals
+      .map(
+        (item) => `
+        <div class="list-item">
+          <div>
+            <div class="list-item__title">#${escapeHtml(String(item.id))} • Project ${escapeHtml(String(item.project_id || "-"))}</div>
+            <div class="subtext">${escapeHtml(item.status || "pending")} • ${escapeHtml(formatDate(item.created_at))}</div>
+          </div>
+          <div class="list-item__value">${escapeHtml(item.approver || "-")}</div>
+        </div>
+      `
+      )
+      .join("");
+  }
+
   function renderHeatmap(heatmap) {
     if (!heatmap.length) {
       el.heatmapList.innerHTML = '<div class="empty-state">Chưa có dữ liệu heatmap.</div>';
       return;
     }
+
     el.heatmapList.innerHTML = heatmap
       .map(
         (item) => `
@@ -467,21 +526,45 @@
       .join("");
   }
 
-  function renderApprovals(approvals) {
-    if (!approvals.length) {
-      el.approvalList.innerHTML = '<div class="empty-state">Không có approval đang chờ.</div>';
-      return;
-    }
-    el.approvalList.innerHTML = approvals
+  function renderInsights(projects, workload, approvals) {
+    const sortedProjects = projects.slice().sort((a, b) => healthRank(a) - healthRank(b) || a.health_score - b.health_score);
+    const riskyProject = sortedProjects[0] || null;
+    const busiestOwner = workload.slice().sort((a, b) => Number(b.active_tasks || 0) - Number(a.active_tasks || 0))[0] || null;
+    const selectedExpert = state.selectedExpertId ? state.expertAssignments.find((item) => item.id === state.selectedExpertId) : null;
+
+    const cards = [
+      {
+        title: "Project nguy hiểm nhất",
+        value: riskyProject ? riskyProject.code : "-",
+        meta: riskyProject ? `${riskyProject.name} • ${riskyProject.health_status} • score ${riskyProject.health_score}` : "No data",
+      },
+      {
+        title: "Owner quá tải nhất",
+        value: busiestOwner ? busiestOwner.owner : "-",
+        meta: busiestOwner ? `${busiestOwner.active_tasks} active task(s)` : "No workload",
+      },
+      {
+        title: "Approval đang pending",
+        value: String(approvals.length),
+        meta: approvals.length ? `Cần follow-up trong approval queue` : "Không có approval chờ",
+      },
+      {
+        title: "Expert đang focus",
+        value: selectedExpert ? selectedExpert.name : "None",
+        meta: selectedExpert ? selectedExpert.focusText : "Click chuyên gia hoặc project để focus",
+      },
+    ];
+
+    el.overviewNotes.innerHTML = cards
       .map(
-        (item) => `
-        <div class="list-item">
-          <div>
-            <div class="list-item__title">#${escapeHtml(String(item.id))} • Project ID ${escapeHtml(String(item.project_id || "-"))}</div>
-            <div class="subtext">Approver: ${escapeHtml(item.approver || "-")} • Created: ${escapeHtml(formatDate(item.created_at))}</div>
+        (card) => `
+        <article class="insight-card">
+          <div class="insight-card__top">
+            <div class="insight-title">${escapeHtml(card.title)}</div>
+            <div class="insight-value">${escapeHtml(card.value)}</div>
           </div>
-          <div class="type-chip">${escapeHtml(item.status || "pending")}</div>
-        </div>
+          <div class="project-reason">${escapeHtml(card.meta)}</div>
+        </article>
       `
       )
       .join("");
@@ -490,57 +573,62 @@
   function renderKanban(projects) {
     const stages = ["intake", "analysis", "design_review", "review", "approval", "execution", "validation", "handover", "closed"];
     const groups = new Map(stages.map((stage) => [stage, []]));
-
     projects.forEach((project) => {
-      const stage = String(project.stage || "intake").toLowerCase();
-      if (!groups.has(stage)) groups.set(stage, []);
-      groups.get(stage).push(project);
+      if (!groups.has(project.stage)) groups.set(project.stage, []);
+      groups.get(project.stage).push(project);
     });
 
-    const anySelected = !!state.selectedExpertId;
-
     el.kanbanBoard.innerHTML = Array.from(groups.entries())
-      .map(
-        ([stage, items]) => `
-        <div class="kanban-column">
-          <h3>${escapeHtml(stage)}</h3>
-          <div class="kanban-count">${items.length} item(s)</div>
-          <div class="kanban-cards">
-            ${
-              items.length
-                ? items
-                    .map((project) => {
-                      const isSelected = projectHandledBySelectedExpert(project);
-                      const classes = [
-                        "kanban-card",
-                        `status-${project.health_status}`,
-                        isSelected ? "kanban-highlighted" : "",
-                        anySelected && !isSelected ? "kanban-dimmed" : "",
-                      ].filter(Boolean).join(" ");
-                      return `
-                        <div class="${classes}">
-                          <strong>${escapeHtml(project.code)}</strong>
-                          <div>${escapeHtml(project.name)}</div>
-                          <div class="subtext">${escapeHtml(project.owner)} • ${escapeHtml(project.health_status)} • due ${escapeHtml(formatDate(project.due_date))}</div>
-                        </div>
-                      `;
-                    })
-                    .join("")
-                : '<div class="empty-state">Không có item</div>'
-            }
-          </div>
-        </div>
-      `
-      )
+      .map(([stage, items]) => {
+        const cards = items
+          .map((project) => {
+            const classes = [
+              "kanban-card",
+              `status-${project.health_status}`,
+              projectHandledBySelectedExpert(project) ? "kanban-highlighted" : "",
+              state.selectedExpertId && !projectHandledBySelectedExpert(project) ? "kanban-dimmed" : "",
+              projectIsFocused(project) ? "kanban-focused" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return `
+              <article class="${classes}" data-project-id="${project.id}">
+                <strong>${escapeHtml(project.code)}</strong>
+                <div>${escapeHtml(project.name)}</div>
+                <div class="subtext">${escapeHtml(project.owner)} • ${escapeHtml(project.health_status)}</div>
+              </article>
+            `;
+          })
+          .join("");
+
+        return `
+          <section class="kanban-column">
+            <h3>${escapeHtml(stage)}</h3>
+            <div class="kanban-count">${items.length} item(s)</div>
+            <div class="kanban-cards">${cards || '<div class="empty-state">Không có item</div>'}</div>
+          </section>
+        `;
+      })
       .join("");
+
+    el.kanbanBoard.querySelectorAll("[data-project-id]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const projectId = Number(card.dataset.projectId);
+        const expert = findExpertForProject(projectId);
+        state.focusedProjectId = projectId;
+        state.selectedExpertId = expert ? expert.id : null;
+        syncDerivedViews();
+      });
+    });
   }
 
   function loadImage(src) {
     return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = src;
     });
   }
 
@@ -599,6 +687,37 @@
     ctx.drawImage(assets.hair, sx, 0, 32, 32, drawX, drawY, 48, 48);
   }
 
+  function getPointOnRoute(route, t) {
+    const points = route && route.length ? route : [ZONES.idle];
+    if (points.length === 1) return points[0];
+    const segmentCount = points.length - 1;
+    const scaled = (t % 1) * segmentCount;
+    const index = Math.min(segmentCount - 1, Math.floor(scaled));
+    const localT = scaled - index;
+    const from = points[index];
+    const to = points[index + 1];
+    return {
+      x: from.x + (to.x - from.x) * localT,
+      y: from.y + (to.y - from.y) * localT,
+    };
+  }
+
+  function drawRoute(ctx, route, color, active) {
+    if (!route || route.length < 2) return;
+    ctx.strokeStyle = active ? color : "rgba(255,255,255,0.08)";
+    ctx.lineWidth = active ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(route[0].x, route[0].y);
+    for (let i = 1; i < route.length; i += 1) ctx.lineTo(route[i].x, route[i].y);
+    ctx.stroke();
+    route.forEach((point) => {
+      ctx.fillStyle = active ? color : "rgba(255,255,255,0.12)";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, active ? 3 : 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
   function renderPixelWorldFrame(timestamp) {
     if (!el.pixelCanvas || !state.pixelAssets) return;
     if (!state.animationStart) state.animationStart = timestamp;
@@ -619,49 +738,47 @@
     ctx.drawImage(skyAsset, 38, 32, 70, 70);
 
     ctx.fillStyle = "rgba(5, 12, 24, 0.78)";
-    ctx.fillRect(18, 18, 290, 52);
+    ctx.fillRect(18, 18, 340, 52);
     ctx.strokeStyle = "rgba(96, 165, 250, 0.28)";
     ctx.lineWidth = 2;
-    ctx.strokeRect(18, 18, 290, 52);
+    ctx.strokeRect(18, 18, 340, 52);
     ctx.fillStyle = "#f3f8ff";
     ctx.font = "28px VT323";
     ctx.textAlign = "left";
-    ctx.fillText("PIXEL OPERATIONS FLOOR", 30, 48);
+    ctx.fillText("PIXEL OPERATIONS FLOOR V2.2", 30, 48);
 
     state.expertAssignments.forEach((expert, index) => {
       const assets = expertImages[expert.id];
       if (!assets) return;
-      const phase = index * 0.9;
-      const targetX = expert.targetPos?.x || expert.basePos.x;
-      const targetY = expert.targetPos?.y || expert.basePos.y;
-      const roamX = Math.sin(seconds * 0.7 + phase) * 12;
-      const roamY = Math.cos(seconds * 0.9 + phase) * 5;
-      const bob = Math.sin(seconds * 2.4 + phase) * 2;
-      const x = targetX + roamX;
-      const y = targetY + roamY;
-      const isActive = state.selectedExpertId === expert.id;
+      const phase = index * 0.7;
+      const routeT = ((seconds * 0.06) + phase * 0.08) % 1;
+      const point = getPointOnRoute(expert.patrolRoute, routeT);
+      const bob = Math.sin(seconds * 4 + phase) * 2;
+      const isActive = state.selectedExpertId === expert.id || (expert.focusProject && Number(expert.focusProject.id) === Number(state.focusedProjectId));
+
+      drawRoute(ctx, expert.patrolRoute, expert.color, isActive);
 
       ctx.fillStyle = isActive ? "rgba(34,211,238,.22)" : "rgba(0,0,0,.18)";
       ctx.beginPath();
-      ctx.ellipse(x, y, isActive ? 16 : 12, isActive ? 7 : 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(point.x, point.y, isActive ? 16 : 12, isActive ? 7 : 6, 0, 0, Math.PI * 2);
       ctx.fill();
-      drawSprite(ctx, assets, x, y, bob);
+      drawSprite(ctx, assets, point.x, point.y, bob);
 
       if (isActive) {
         ctx.strokeStyle = expert.color;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(x, y - 26, 20 + Math.sin(seconds * 3) * 2, 0, Math.PI * 2);
+        ctx.arc(point.x, point.y - 26, 20 + Math.sin(seconds * 3) * 2, 0, Math.PI * 2);
         ctx.stroke();
       }
 
       ctx.fillStyle = expert.color;
       ctx.font = "20px VT323";
       ctx.textAlign = "center";
-      ctx.fillText(expert.name.toUpperCase(), x, y - 58);
+      ctx.fillText(expert.name.toUpperCase(), point.x, point.y - 58);
 
-      const bubbleText = expert.focusProject ? expert.focusProject.code : "IDLE";
-      drawBubble(ctx, x, y - 2, Math.max(90, bubbleText.length * 10), bubbleText, expert.color);
+      const bubbleText = expert.focusProject ? expert.focusProject.code : "STANDBY";
+      drawBubble(ctx, point.x, point.y - 2, Math.max(100, bubbleText.length * 10), bubbleText, expert.color);
     });
 
     el.pixelRoster.innerHTML = state.expertAssignments
@@ -680,6 +797,7 @@
   }
 
   function startPixelAnimation() {
+    if (!state.pixelAssets) return;
     if (state.animationFrame) cancelAnimationFrame(state.animationFrame);
     state.animationFrame = requestAnimationFrame(renderPixelWorldFrame);
   }
@@ -689,22 +807,31 @@
     const types = [...new Set(projects.map((p) => p.type))].sort();
     const stages = [...new Set(projects.map((p) => p.stage))].sort();
 
-    const renderOptions = (select, values, current) => {
+    function renderOptions(select, values, current) {
       if (!select) return;
       select.innerHTML = ['<option value="all">All</option>']
         .concat(values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
         .join("");
       select.value = values.includes(current) ? current : "all";
-    };
+    }
 
     renderOptions(el.filterProjectType, types, state.filters.projectType);
     renderOptions(el.filterStage, stages, state.filters.stage);
     if (el.filterHealth) el.filterHealth.value = state.filters.healthStatus;
+    if (el.filterSearch) el.filterSearch.value = state.filters.search;
   }
 
   function syncDerivedViews() {
     const filteredProjects = getFilteredProjects();
     state.expertAssignments = buildExpertAssignments(filteredProjects, state.workload, state.approvals);
+
+    if (state.selectedExpertId && !state.expertAssignments.some((item) => item.id === state.selectedExpertId)) {
+      state.selectedExpertId = null;
+    }
+    if (state.focusedProjectId != null && !filteredProjects.some((item) => Number(item.id) === Number(state.focusedProjectId))) {
+      state.focusedProjectId = null;
+    }
+
     renderProjects(filteredProjects);
     renderExpertsBoard(state.expertAssignments);
     renderInsights(filteredProjects, state.workload, state.approvals);
@@ -786,18 +913,22 @@
 
   function bindFilters() {
     const onFilterChange = () => {
+      state.filters.search = el.filterSearch?.value || "";
       state.filters.projectType = el.filterProjectType?.value || "all";
       state.filters.stage = el.filterStage?.value || "all";
       state.filters.healthStatus = el.filterHealth?.value || "all";
       syncDerivedViews();
     };
 
+    el.filterSearch?.addEventListener("input", onFilterChange);
     el.filterProjectType?.addEventListener("change", onFilterChange);
     el.filterStage?.addEventListener("change", onFilterChange);
     el.filterHealth?.addEventListener("change", onFilterChange);
     el.resetFiltersBtn?.addEventListener("click", () => {
-      state.filters = { projectType: "all", stage: "all", healthStatus: "all" };
+      state.filters = { search: "", projectType: "all", stage: "all", healthStatus: "all" };
       renderFilters();
+      state.selectedExpertId = null;
+      state.focusedProjectId = null;
       syncDerivedViews();
     });
   }
