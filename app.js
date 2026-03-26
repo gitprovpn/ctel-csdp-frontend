@@ -1,535 +1,690 @@
 (function () {
   "use strict";
 
-  const API_BASE =
-    (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl
-      ? String(window.APP_CONFIG.apiBaseUrl)
-      : "").replace(/\/+$/, "");
+  const API_BASE = ((window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) || "").replace(/\/+$/, "");
 
-  const SELECTORS = {
-    summary: {
-      total: "#total-projects",
-      onTrack: "#on-track",
-      atRisk: "#at-risk",
-      delayed: "#delayed",
-      blocked: "#blocked",
-      avgHealth: "#avg-health-score",
+  const EXPERTS = [
+    {
+      id: "minh",
+      name: "Anh Minh",
+      role: "Lead Solution Architect",
+      specialty: ["presales", "design_review", "analysis"],
+      tag: "Lead SA",
+      sprite: {
+        body: "./assets/pixel/experts/minh/body.png",
+        outfit: "./assets/pixel/experts/minh/outfit.png",
+        hair: "./assets/pixel/experts/minh/hair.png",
+      },
+      color: "#22d3ee",
+      pos: { x: 210, y: 355 },
     },
-    projects: "#project-list",
-    workload: "#workload-list",
-    heatmap: "#heatmap-list",
-    approvals: "#approval-list",
-    kanban: "#kanban-board",
-    status: "#app-status",
-    refreshButtons: '[data-action="refresh"]',
-    createProjectForm: "#create-project-form",
-    createProjectButton: "#create-project-btn",
-    createProjectMessage: "#create-project-message",
-    overviewPanel: ".section.grid.two-col-equal .panel:last-child .panel-body",
+    {
+      id: "linh",
+      name: "Chị Linh",
+      role: "Secure Delivery Architect",
+      specialty: ["delivery", "execution", "implementation", "validation"],
+      tag: "Delivery",
+      sprite: {
+        body: "./assets/pixel/experts/linh/body.png",
+        outfit: "./assets/pixel/experts/linh/outfit.png",
+        hair: "./assets/pixel/experts/linh/hair.png",
+      },
+      color: "#60a5fa",
+      pos: { x: 375, y: 340 },
+    },
+    {
+      id: "nam",
+      name: "Anh Nam",
+      role: "Security Review Specialist",
+      specialty: ["review", "design", "review_stage"],
+      tag: "Review",
+      sprite: {
+        body: "./assets/pixel/experts/nam/body.png",
+        outfit: "./assets/pixel/experts/nam/outfit.png",
+        hair: "./assets/pixel/experts/nam/hair.png",
+      },
+      color: "#a78bfa",
+      pos: { x: 535, y: 338 },
+    },
+    {
+      id: "vy",
+      name: "Chị Vy",
+      role: "Approval Coordinator",
+      specialty: ["approval", "pending_approvals"],
+      tag: "Approvals",
+      sprite: {
+        body: "./assets/pixel/experts/vy/body.png",
+        outfit: "./assets/pixel/experts/vy/outfit.png",
+        hair: "./assets/pixel/experts/vy/hair.png",
+      },
+      color: "#f59e0b",
+      pos: { x: 678, y: 352 },
+    },
+    {
+      id: "phuc",
+      name: "Anh Phúc",
+      role: "Handover & Closure Specialist",
+      specialty: ["handover", "closed", "validation"],
+      tag: "Handover",
+      sprite: {
+        body: "./assets/pixel/experts/phuc/body.png",
+        outfit: "./assets/pixel/experts/phuc/outfit.png",
+        hair: "./assets/pixel/experts/phuc/hair.png",
+      },
+      color: "#22c55e",
+      pos: { x: 785, y: 298 },
+    },
+  ];
+
+  const ASSET_PATHS = {
+    house: "./assets/pixel/map/housemap.png",
+    sun: "./assets/pixel/map/sun.png",
+    moon: "./assets/pixel/map/moon.png",
   };
 
-  function $(selector) {
-    return document.querySelector(selector);
-  }
+  const state = {
+    projects: [],
+    workload: [],
+    heatmap: [],
+    approvals: [],
+    summary: {},
+    expertAssignments: [],
+    pixelAssets: null,
+  };
 
-  function $all(selector) {
-    return Array.from(document.querySelectorAll(selector));
-  }
+  const el = {
+    summaryCards: document.getElementById("summaryCards"),
+    projectList: document.getElementById("projectList"),
+    workloadList: document.getElementById("workloadList"),
+    heatmapList: document.getElementById("heatmapList"),
+    approvalList: document.getElementById("approvalList"),
+    kanbanBoard: document.getElementById("kanbanBoard"),
+    expertsBoard: document.getElementById("expertsBoard"),
+    overviewNotes: document.getElementById("overviewNotes"),
+    pixelCanvas: document.getElementById("pixelCanvas"),
+    pixelRoster: document.getElementById("pixelRoster"),
+    projectForm: document.getElementById("projectForm"),
+    formStatus: document.getElementById("formStatus"),
+    appStatus: document.getElementById("appStatus"),
+    refreshBtn: document.getElementById("refreshBtn"),
+  };
 
   function escapeHtml(value) {
     return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
   function asArray(value) {
     return Array.isArray(value) ? value : [];
   }
 
-  function asObject(value) {
-    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  }
-
-  function safeText(value, fallback = "-") {
-    if (value === null || value === undefined || value === "") return fallback;
-    return String(value);
-  }
-
-  function formatNumber(value, fallback = "0") {
-    const n = Number(value);
-    return Number.isFinite(n) ? String(n) : fallback;
+  function setAppStatus(message, stateName) {
+    if (!el.appStatus) return;
+    el.appStatus.textContent = message || "";
+    el.appStatus.dataset.state = stateName || "idle";
   }
 
   function formatDate(value) {
     if (!value) return "-";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleString("vi-VN");
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString("vi-VN");
   }
 
-  function getStatusClass(status) {
-    const s = String(status || "").toLowerCase();
-    if (s === "blocked") return "status-blocked";
-    if (s === "delayed") return "status-delayed";
-    if (s === "at_risk") return "status-at-risk";
-    return "status-on-track";
+  function formatNumber(value, fallback = "0") {
+    const num = Number(value);
+    return Number.isFinite(num) ? String(num) : fallback;
   }
 
-  function setStatus(message, type = "info") {
-    const el = $(SELECTORS.status);
-    if (!el) return;
-    el.textContent = message || "";
-    el.dataset.state = type;
+  function healthRank(project) {
+    const map = { blocked: 0, delayed: 1, at_risk: 2, on_track: 3 };
+    return map[String(project?.health_status || "on_track")] ?? 4;
   }
 
-  async function fetchJson(path, options = {}) {
-    if (!API_BASE) {
-      throw new Error("Thiếu APP_CONFIG.apiBaseUrl trong config.js");
-    }
-
+  function fetchJson(path, options = {}) {
     const url = `${API_BASE}${path}`;
-    const method = options.method || "GET";
-    const headers = {
-      ...(options.headers || {}),
-    };
+    const headers = { ...(options.headers || {}) };
+    let body = options.body;
 
-    let body;
-    if (options.body !== undefined) {
+    if (body !== undefined && typeof body !== "string") {
       headers["Content-Type"] = "application/json";
-      body = JSON.stringify(options.body);
+      body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, {
-      method,
+    return fetch(url, {
+      method: options.method || "GET",
       headers,
       body,
+    }).then(async (response) => {
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (err) {
+        throw new Error(`API không trả JSON hợp lệ (${response.status})`);
+      }
+      if (!response.ok) {
+        throw new Error((data && (data.error || data.message)) || `HTTP ${response.status}`);
+      }
+      return data;
     });
-
-    const raw = await response.text();
-    let data = null;
-
-    try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch (err) {
-      throw new Error(`API không trả JSON hợp lệ (${response.status}): ${raw}`);
-    }
-
-    if (!response.ok) {
-      const apiError =
-        (data && typeof data === "object" && (data.error || data.message)) ||
-        `HTTP ${response.status}`;
-      throw new Error(apiError);
-    }
-
-    return data;
   }
 
-  function renderEmpty(el, message) {
-    if (!el) return;
-    el.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+  function normalizeProject(project) {
+    return {
+      id: project.id,
+      code: project.project_code || project.code || `PROJECT-${project.id}`,
+      name: project.project_name || project.name || "Untitled Project",
+      type: project.project_type || project.type || "GENERAL",
+      stage: project.stage || "intake",
+      owner: project.owner || project.owner_name || "Unassigned",
+      health_status: project.health_status || "on_track",
+      health_score: Number(project.health_score || 0),
+      health_reason: project.health_reason || "Healthy baseline",
+      due_date: project.due_date || null,
+      task_count: Number(project.task_count || 0),
+      overdue_tasks: Number(project.overdue_tasks || 0),
+      risk_count: Number(project.risk_count || 0),
+      blocker_count: Number(project.blocker_count || 0),
+      pending_approvals: Number(project.pending_approvals || 0),
+    };
   }
 
-  function renderSummary(summary) {
-    const data = asObject(summary);
+  function renderSummaryCards(summary) {
+    const s = summary || {};
+    const cards = [
+      ["Total Projects", s.total_projects || 0],
+      ["On Track", s.on_track || 0],
+      ["At Risk", s.at_risk || 0],
+      ["Delayed", s.delayed || 0],
+      ["Blocked", s.blocked || 0],
+      ["Avg Health Score", s.avg_health_score || 0],
+    ];
 
-    const totalEl = $(SELECTORS.summary.total);
-    const onTrackEl = $(SELECTORS.summary.onTrack);
-    const atRiskEl = $(SELECTORS.summary.atRisk);
-    const delayedEl = $(SELECTORS.summary.delayed);
-    const blockedEl = $(SELECTORS.summary.blocked);
-    const avgHealthEl = $(SELECTORS.summary.avgHealth);
-
-    if (totalEl) totalEl.textContent = formatNumber(data.total_projects, "0");
-    if (onTrackEl) onTrackEl.textContent = formatNumber(data.on_track, "0");
-    if (atRiskEl) atRiskEl.textContent = formatNumber(data.at_risk, "0");
-    if (delayedEl) delayedEl.textContent = formatNumber(data.delayed, "0");
-    if (blockedEl) blockedEl.textContent = formatNumber(data.blocked, "0");
-    if (avgHealthEl) avgHealthEl.textContent = formatNumber(data.avg_health_score, "0");
+    el.summaryCards.innerHTML = cards
+      .map(([label, value]) => `
+        <article class="card">
+          <div class="card-label">${escapeHtml(label)}</div>
+          <div class="card-value">${escapeHtml(String(value))}</div>
+        </article>
+      `)
+      .join("");
   }
 
   function renderProjects(projects) {
-    const el = $(SELECTORS.projects);
-    if (!el) return;
-
-    const rows = asArray(projects);
-
-    if (!rows.length) {
-      renderEmpty(el, "Chưa có project.");
+    if (!projects.length) {
+      el.projectList.innerHTML = '<div class="empty-state">Chưa có project nào.</div>';
       return;
     }
 
-    el.innerHTML = rows
-      .map((p) => {
-        const healthStatus = safeText(p.health_status, "on_track");
-        const healthScore = formatNumber(p.health_score, "100");
-        return `
-          <div class="project-card ${escapeHtml(getStatusClass(healthStatus))}">
-            <div class="project-card__header">
-              <div class="project-card__code">${escapeHtml(safeText(p.project_code))}</div>
-              <div class="project-card__badge">${escapeHtml(healthStatus)}</div>
-            </div>
-            <div class="project-card__title">${escapeHtml(safeText(p.project_name))}</div>
-            <div class="project-card__meta">
-              <div><strong>Type:</strong> ${escapeHtml(safeText(p.project_type, "GENERAL"))}</div>
-              <div><strong>Stage:</strong> ${escapeHtml(safeText(p.stage, "intake"))}</div>
-              <div><strong>Owner:</strong> ${escapeHtml(safeText(p.owner, "Unassigned"))}</div>
-              <div><strong>Health:</strong> ${escapeHtml(healthScore)}</div>
-              <div><strong>Due:</strong> ${escapeHtml(formatDate(p.due_date))}</div>
-            </div>
-            <div class="project-card__metrics">
-              <span>Tasks: ${escapeHtml(formatNumber(p.task_count, "0"))}</span>
-              <span>Overdue: ${escapeHtml(formatNumber(p.overdue_tasks, "0"))}</span>
-              <span>Risks: ${escapeHtml(formatNumber(p.risk_count, "0"))}</span>
-              <span>Blockers: ${escapeHtml(formatNumber(p.blocker_count, "0"))}</span>
-              <span>Approvals: ${escapeHtml(formatNumber(p.pending_approvals, "0"))}</span>
-            </div>
-            <div class="project-card__reason">${escapeHtml(safeText(p.health_reason, "Healthy baseline"))}</div>
+    el.projectList.innerHTML = projects
+      .map(
+        (project) => `
+        <article class="project-card status-${escapeHtml(project.health_status)}">
+          <div class="project-card__header">
+            <div class="project-code">${escapeHtml(project.code)}</div>
+            <div class="status-chip">${escapeHtml(project.health_status)}</div>
           </div>
-        `;
-      })
+          <div class="project-title">${escapeHtml(project.name)}</div>
+          <div class="project-meta">
+            <div><strong>Type:</strong> ${escapeHtml(project.type)}</div>
+            <div><strong>Stage:</strong> ${escapeHtml(project.stage)}</div>
+            <div><strong>Owner:</strong> ${escapeHtml(project.owner)}</div>
+            <div><strong>Health:</strong> ${escapeHtml(String(project.health_score))}</div>
+            <div><strong>Due:</strong> ${escapeHtml(formatDate(project.due_date))}</div>
+          </div>
+          <div class="project-metrics">
+            <div>Tasks: ${escapeHtml(String(project.task_count))}</div>
+            <div>Overdue: ${escapeHtml(String(project.overdue_tasks))}</div>
+            <div>Risks: ${escapeHtml(String(project.risk_count))}</div>
+            <div>Blockers: ${escapeHtml(String(project.blocker_count))}</div>
+            <div>Approvals: ${escapeHtml(String(project.pending_approvals))}</div>
+          </div>
+          <div class="project-reason">${escapeHtml(project.health_reason)}</div>
+        </article>
+      `
+      )
+      .join("");
+  }
+
+  function buildExpertAssignments(projects, workload, approvals) {
+    const sortedProjects = projects.slice().sort((a, b) => {
+      const byRank = healthRank(a) - healthRank(b);
+      if (byRank !== 0) return byRank;
+      return a.health_score - b.health_score;
+    });
+
+    const pendingProjects = new Set(asArray(approvals).map((a) => Number(a.project_id)));
+
+    return EXPERTS.map((expert) => {
+      let currentProject = null;
+
+      if (expert.id === "vy") {
+        currentProject = sortedProjects.find((p) => pendingProjects.has(Number(p.id))) || sortedProjects[0] || null;
+      } else if (expert.id === "phuc") {
+        currentProject =
+          sortedProjects.find((p) => ["handover", "validation", "closed"].includes(String(p.stage).toLowerCase())) ||
+          sortedProjects[sortedProjects.length - 1] ||
+          null;
+      } else {
+        currentProject =
+          sortedProjects.find((p) => {
+            const type = String(p.type || "").toLowerCase();
+            const stage = String(p.stage || "").toLowerCase();
+            return expert.specialty.includes(type) || expert.specialty.includes(stage);
+          }) ||
+          sortedProjects.find((p) => p.health_status !== "on_track") ||
+          sortedProjects[0] ||
+          null;
+      }
+
+      const ownerRow = workload.find((item) => String(item.owner || "").toLowerCase() === expert.name.toLowerCase());
+      const activeTasks = Number(ownerRow?.active_tasks || 0);
+      const focusText = currentProject
+        ? `${currentProject.code} • ${currentProject.name}`
+        : "Đang chờ assignment mới";
+
+      return {
+        ...expert,
+        currentProject,
+        activeTasks,
+        pendingApprovals: currentProject ? currentProject.pending_approvals : 0,
+        focusText,
+      };
+    });
+  }
+
+  function renderExpertsBoard(assignments) {
+    el.expertsBoard.innerHTML = assignments
+      .map(
+        (expert) => `
+        <article class="expert-card">
+          <div class="expert-card__top">
+            <div class="expert-identity">
+              <div class="expert-avatar">
+                <img src="${escapeHtml(expert.sprite.body)}" alt="${escapeHtml(expert.name)}" />
+              </div>
+              <div>
+                <div class="expert-tag">${escapeHtml(expert.tag)}</div>
+                <div class="expert-name">${escapeHtml(expert.name)}</div>
+                <div class="expert-role">${escapeHtml(expert.role)}</div>
+              </div>
+            </div>
+            <div class="type-chip">${escapeHtml(expert.currentProject?.health_status || "idle")}</div>
+          </div>
+          <div class="expert-focus">${escapeHtml(expert.focusText)}</div>
+          <div class="expert-metrics">
+            <div><strong>Project:</strong> ${escapeHtml(expert.currentProject?.code || "-")}</div>
+            <div><strong>Stage:</strong> ${escapeHtml(expert.currentProject?.stage || "idle")}</div>
+            <div><strong>Type:</strong> ${escapeHtml(expert.currentProject?.type || "-")}</div>
+            <div><strong>My active tasks:</strong> ${escapeHtml(String(expert.activeTasks))}</div>
+            <div><strong>Pending approvals:</strong> ${escapeHtml(String(expert.pendingApprovals))}</div>
+            <div><strong>Due:</strong> ${escapeHtml(formatDate(expert.currentProject?.due_date))}</div>
+          </div>
+        </article>
+      `
+      )
+      .join("");
+  }
+
+  function renderInsights(projects, workload, approvals) {
+    const riskiestProject =
+      projects.slice().sort((a, b) => {
+        const rank = healthRank(a) - healthRank(b);
+        if (rank !== 0) return rank;
+        return a.health_score - b.health_score;
+      })[0] || null;
+
+    const busiestOwner =
+      workload.slice().sort((a, b) => Number(b.active_tasks || 0) - Number(a.active_tasks || 0))[0] || null;
+
+    const insights = [
+      {
+        title: "Project nguy hiểm nhất",
+        value: riskiestProject ? riskiestProject.code : "N/A",
+        detail: riskiestProject
+          ? `${riskiestProject.name} • ${riskiestProject.health_status} • score ${riskiestProject.health_score}`
+          : "Chưa có dữ liệu",
+      },
+      {
+        title: "Owner quá tải nhất",
+        value: busiestOwner ? busiestOwner.owner : "N/A",
+        detail: busiestOwner ? `${busiestOwner.active_tasks} active task(s)` : "Chưa có dữ liệu workload",
+      },
+      {
+        title: "Approval đang pending",
+        value: String(approvals.length),
+        detail: approvals.length ? `${approvals.length} item cần xử lý ngay` : "Không có approval chờ xử lý",
+      },
+    ];
+
+    el.overviewNotes.innerHTML = insights
+      .map(
+        (item) => `
+        <article class="insight-card">
+          <div class="insight-card__top">
+            <div class="insight-title">${escapeHtml(item.title)}</div>
+            <div class="insight-value">${escapeHtml(item.value)}</div>
+          </div>
+          <div class="subtext">${escapeHtml(item.detail)}</div>
+        </article>
+      `
+      )
       .join("");
   }
 
   function renderWorkload(workload) {
-    const el = $(SELECTORS.workload);
-    if (!el) return;
-
-    const rows = asArray(workload);
-
-    if (!rows.length) {
-      renderEmpty(el, "Chưa có dữ liệu workload.");
+    if (!workload.length) {
+      el.workloadList.innerHTML = '<div class="empty-state">Chưa có dữ liệu workload.</div>';
       return;
     }
-
-    el.innerHTML = rows
+    el.workloadList.innerHTML = workload
       .map(
         (item) => `
-          <div class="list-row">
-            <div class="list-row__title">${escapeHtml(safeText(item.owner, "Unassigned"))}</div>
-            <div class="list-row__value">${escapeHtml(formatNumber(item.active_tasks, "0"))}</div>
-          </div>
-        `
+        <div class="list-item">
+          <div class="list-item__title">${escapeHtml(item.owner || "Unassigned")}</div>
+          <div class="list-item__value">${escapeHtml(String(item.active_tasks || 0))}</div>
+        </div>
+      `
       )
       .join("");
   }
 
   function renderHeatmap(heatmap) {
-    const el = $(SELECTORS.heatmap);
-    if (!el) return;
-
-    const rows = asArray(heatmap);
-
-    if (!rows.length) {
-      renderEmpty(el, "Chưa có dữ liệu heatmap.");
+    if (!heatmap.length) {
+      el.heatmapList.innerHTML = '<div class="empty-state">Chưa có dữ liệu heatmap.</div>';
       return;
     }
-
-    el.innerHTML = rows
+    el.heatmapList.innerHTML = heatmap
       .map(
         (item) => `
-          <div class="list-row">
-            <div class="list-row__title">
-              ${escapeHtml(safeText(item.type, "-"))} / ${escapeHtml(safeText(item.category, "-"))}
-            </div>
-            <div class="list-row__value">${escapeHtml(formatNumber(item.count, "0"))}</div>
-          </div>
-        `
+        <div class="list-item">
+          <div class="list-item__title">${escapeHtml(item.type || "-")} / ${escapeHtml(item.category || "-")}</div>
+          <div class="list-item__value">${escapeHtml(String(item.count || 0))}</div>
+        </div>
+      `
       )
       .join("");
   }
 
   function renderApprovals(approvals) {
-    const el = $(SELECTORS.approvals);
-    if (!el) return;
-
-    const rows = asArray(approvals);
-
-    if (!rows.length) {
-      renderEmpty(el, "Không có approval đang chờ.");
+    if (!approvals.length) {
+      el.approvalList.innerHTML = '<div class="empty-state">Không có approval đang chờ.</div>';
       return;
     }
-
-    el.innerHTML = rows
+    el.approvalList.innerHTML = approvals
       .map(
         (item) => `
-          <div class="approval-card">
-            <div class="approval-card__top">
-              <strong>#${escapeHtml(safeText(item.id))}</strong>
-              <span>${escapeHtml(safeText(item.status, "pending"))}</span>
-            </div>
-            <div><strong>Project ID:</strong> ${escapeHtml(safeText(item.project_id))}</div>
-            <div><strong>Approver:</strong> ${escapeHtml(safeText(item.approver, "-"))}</div>
-            <div><strong>Created:</strong> ${escapeHtml(formatDate(item.created_at))}</div>
-            <div><strong>Comment:</strong> ${escapeHtml(safeText(item.comment, "-"))}</div>
+        <div class="list-item">
+          <div>
+            <div class="list-item__title">#${escapeHtml(String(item.id))} • Project ID ${escapeHtml(String(item.project_id || "-"))}</div>
+            <div class="subtext">Approver: ${escapeHtml(item.approver || "-")} • Created: ${escapeHtml(formatDate(item.created_at))}</div>
           </div>
-        `
+          <div class="type-chip">${escapeHtml(item.status || "pending")}</div>
+        </div>
+      `
       )
       .join("");
   }
 
   function renderKanban(projects) {
-    const el = $(SELECTORS.kanban);
-    if (!el) return;
-
-    const rows = asArray(projects);
-    const stages = [
-      "intake",
-      "analysis",
-      "design",
-      "review",
-      "approval",
-      "execution",
-      "validation",
-      "handover",
-      "closed",
-    ];
-
+    const stages = ["intake", "analysis", "design_review", "review", "approval", "execution", "validation", "handover", "closed"];
     const groups = new Map(stages.map((stage) => [stage, []]));
 
-    for (const project of rows) {
+    projects.forEach((project) => {
       const stage = String(project.stage || "intake").toLowerCase();
       if (!groups.has(stage)) groups.set(stage, []);
       groups.get(stage).push(project);
-    }
+    });
 
-    el.innerHTML = Array.from(groups.entries())
-      .map(([stage, items]) => {
-        const cards = asArray(items)
-          .map(
-            (p) => `
-              <div class="kanban-card ${escapeHtml(getStatusClass(p.health_status))}">
-                <div class="kanban-card__code">${escapeHtml(safeText(p.project_code))}</div>
-                <div class="kanban-card__title">${escapeHtml(safeText(p.project_name))}</div>
-                <div class="kanban-card__meta">
-                  ${escapeHtml(safeText(p.owner, "Unassigned"))} • ${escapeHtml(safeText(p.health_status, "on_track"))}
-                </div>
-              </div>
-            `
-          )
-          .join("");
-
-        return `
-          <div class="kanban-column">
-            <div class="kanban-column__title">${escapeHtml(stage)}</div>
-            <div class="kanban-column__count">${items.length}</div>
-            <div class="kanban-column__body">
-              ${cards || '<div class="empty-state">Không có item</div>'}
-            </div>
+    el.kanbanBoard.innerHTML = Array.from(groups.entries())
+      .map(
+        ([stage, items]) => `
+        <div class="kanban-column">
+          <h3>${escapeHtml(stage)}</h3>
+          <div class="kanban-count">${items.length} item(s)</div>
+          <div class="kanban-cards">
+            ${
+              items.length
+                ? items
+                    .map(
+                      (project) => `
+                  <div class="kanban-card status-${escapeHtml(project.health_status)}">
+                    <strong>${escapeHtml(project.code)}</strong>
+                    <div>${escapeHtml(project.name)}</div>
+                    <div class="subtext">${escapeHtml(project.owner)} • ${escapeHtml(project.health_status)} • due ${escapeHtml(formatDate(project.due_date))}</div>
+                  </div>
+                `
+                    )
+                    .join("")
+                : '<div class="empty-state">Không có item</div>'
+            }
           </div>
-        `;
-      })
+        </div>
+      `
+      )
       .join("");
   }
 
-  function buildInsights(projects, workload, approvals) {
-    const safeProjects = asArray(projects);
-    const safeWorkload = asArray(workload);
-    const safeApprovals = asArray(approvals);
-
-    const mostDangerousProject =
-      safeProjects
-        .slice()
-        .sort((a, b) => {
-          const scoreDiff = Number(a.health_score || 0) - Number(b.health_score || 0);
-          if (scoreDiff !== 0) return scoreDiff;
-          return Number(b.blocker_count || 0) - Number(a.blocker_count || 0);
-        })[0] || null;
-
-    const busiestOwner =
-      safeWorkload
-        .slice()
-        .sort((a, b) => Number(b.active_tasks || 0) - Number(a.active_tasks || 0))[0] || null;
-
-    return {
-      mostDangerousProject,
-      busiestOwner,
-      pendingApprovalsCount: safeApprovals.length,
-    };
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
   }
 
-  function renderOverviewNotes(projects, workload, approvals) {
-    const el = $(SELECTORS.overviewPanel);
-    if (!el) return;
+  async function loadPixelAssets() {
+    const [house, sun, moon] = await Promise.all([
+      loadImage(ASSET_PATHS.house),
+      loadImage(ASSET_PATHS.sun),
+      loadImage(ASSET_PATHS.moon),
+    ]);
 
-    const insights = buildInsights(projects, workload, approvals);
-    const danger = insights.mostDangerousProject;
-    const busiest = insights.busiestOwner;
+    const expertImages = {};
+    for (const expert of EXPERTS) {
+      const [body, outfit, hair] = await Promise.all([
+        loadImage(expert.sprite.body),
+        loadImage(expert.sprite.outfit),
+        loadImage(expert.sprite.hair),
+      ]);
+      expertImages[expert.id] = { body, outfit, hair };
+    }
 
-    el.innerHTML = `
-      <div class="project-list">
-        <div class="project-card ${escapeHtml(getStatusClass(danger?.health_status || "on_track"))}">
-          <div class="project-card__header">
-            <div class="project-card__code">Project nguy hiểm nhất</div>
-            <div class="project-card__badge">${escapeHtml(safeText(danger?.health_status, "N/A"))}</div>
-          </div>
-          <div class="project-card__title">${escapeHtml(safeText(danger?.project_name, "Chưa có dữ liệu"))}</div>
-          <div class="project-card__meta">
-            <div><strong>Code:</strong> ${escapeHtml(safeText(danger?.project_code))}</div>
-            <div><strong>Health:</strong> ${escapeHtml(formatNumber(danger?.health_score, "0"))}</div>
-            <div><strong>Stage:</strong> ${escapeHtml(safeText(danger?.stage))}</div>
-            <div><strong>Owner:</strong> ${escapeHtml(safeText(danger?.owner, "Unassigned"))}</div>
-          </div>
-          <div class="project-card__reason">${escapeHtml(safeText(danger?.health_reason, "Không có insight."))}</div>
+    return { house, sun, moon, expertImages };
+  }
+
+  function drawBubble(ctx, x, y, width, text, color) {
+    const bubbleX = x - width / 2;
+    const bubbleY = y - 62;
+    ctx.fillStyle = "rgba(6, 16, 29, 0.92)";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(bubbleX, bubbleY, width, 28, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - 6, bubbleY + 28);
+    ctx.lineTo(x, bubbleY + 36);
+    ctx.lineTo(x + 6, bubbleY + 28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#f3f8ff";
+    ctx.font = "16px VT323";
+    ctx.textAlign = "center";
+    ctx.fillText(text, x, bubbleY + 18);
+  }
+
+  function drawSprite(ctx, assets, x, y) {
+    const frame = 0;
+    const sx = frame * 32;
+    const drawX = x - 24;
+    const drawY = y - 48;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(assets.body, sx, 0, 32, 32, drawX, drawY, 48, 48);
+    ctx.drawImage(assets.outfit, sx, 0, 32, 32, drawX, drawY, 48, 48);
+    ctx.drawImage(assets.hair, sx, 0, 32, 32, drawX, drawY, 48, 48);
+  }
+
+  function renderPixelWorld(assignments) {
+    if (!el.pixelCanvas || !state.pixelAssets) return;
+    const ctx = el.pixelCanvas.getContext("2d");
+    if (!ctx) return;
+
+    const { house, sun, moon, expertImages } = state.pixelAssets;
+    const canvas = el.pixelCanvas;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(house, 0, 0, canvas.width, canvas.height);
+
+    const currentHour = new Date().getHours();
+    const skyAsset = currentHour >= 6 && currentHour < 18 ? sun : moon;
+    ctx.drawImage(skyAsset, 38, 32, 70, 70);
+
+    ctx.fillStyle = "rgba(5, 12, 24, 0.78)";
+    ctx.fillRect(18, 18, 270, 52);
+    ctx.strokeStyle = "rgba(96, 165, 250, 0.28)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 18, 270, 52);
+    ctx.fillStyle = "#f3f8ff";
+    ctx.font = "28px VT323";
+    ctx.textAlign = "left";
+    ctx.fillText("PIXEL OPERATIONS FLOOR", 30, 48);
+
+    assignments.forEach((expert) => {
+      const assets = expertImages[expert.id];
+      if (!assets) return;
+      const { x, y } = expert.pos;
+      ctx.fillStyle = "rgba(0,0,0,.18)";
+      ctx.beginPath();
+      ctx.ellipse(x, y, 12, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      drawSprite(ctx, assets, x, y);
+
+      ctx.fillStyle = expert.color;
+      ctx.font = "20px VT323";
+      ctx.textAlign = "center";
+      ctx.fillText(expert.name.toUpperCase(), x, y - 58);
+
+      const bubbleText = expert.currentProject ? expert.currentProject.code : "IDLE";
+      drawBubble(ctx, x, y - 2, Math.max(90, bubbleText.length * 10), bubbleText, expert.color);
+    });
+
+    el.pixelRoster.innerHTML = assignments
+      .map(
+        (expert) => `
+        <div class="pixel-roster-item">
+          <div class="pixel-roster-item__name">${escapeHtml(expert.name)}</div>
+          <div class="pixel-roster-item__meta">${escapeHtml(expert.role)} • ${escapeHtml(expert.tag)}</div>
+          <div class="pixel-roster-item__focus">${escapeHtml(expert.focusText)}</div>
         </div>
-
-        <div class="list-row">
-          <div class="list-row__title">
-            Owner quá tải nhất<br />
-            <span style="color: var(--muted); font-size: 12px;">
-              ${escapeHtml(safeText(busiest?.owner, "Chưa có dữ liệu"))}
-            </span>
-          </div>
-          <div class="list-row__value">${escapeHtml(formatNumber(busiest?.active_tasks, "0"))}</div>
-        </div>
-
-        <div class="list-row">
-          <div class="list-row__title">
-            Approval đang pending<br />
-            <span style="color: var(--muted); font-size: 12px;">Tổng số approval chờ xử lý</span>
-          </div>
-          <div class="list-row__value">${escapeHtml(formatNumber(insights.pendingApprovalsCount, "0"))}</div>
-        </div>
-      </div>
-    `;
+      `
+      )
+      .join("");
   }
 
   async function loadSummary() {
-    const summary = await fetchJson("/api/dashboard/summary");
-    renderSummary(summary);
-    return summary;
+    state.summary = await fetchJson("/api/dashboard/summary");
+    renderSummaryCards(state.summary);
   }
 
   async function loadProjects() {
-    const projects = await fetchJson("/api/projects");
-    const rows = asArray(projects);
-    renderProjects(rows);
-    renderKanban(rows);
-    return rows;
+    const data = await fetchJson("/api/projects");
+    state.projects = asArray(data).map(normalizeProject);
+    renderProjects(state.projects);
+    renderKanban(state.projects);
   }
 
   async function loadWorkload() {
-    const workload = await fetchJson("/api/dashboard/workload");
-    const rows = asArray(workload);
-    renderWorkload(rows);
-    return rows;
+    state.workload = asArray(await fetchJson("/api/dashboard/workload"));
+    renderWorkload(state.workload);
   }
 
   async function loadHeatmap() {
-    const heatmap = await fetchJson("/api/dashboard/heatmap");
-    const rows = asArray(heatmap);
-    renderHeatmap(rows);
-    return rows;
+    state.heatmap = asArray(await fetchJson("/api/dashboard/heatmap"));
+    renderHeatmap(state.heatmap);
   }
 
   async function loadApprovals() {
-    const approvals = await fetchJson("/api/approvals/pending");
-    const rows = asArray(approvals);
-    renderApprovals(rows);
-    return rows;
+    state.approvals = asArray(await fetchJson("/api/approvals/pending"));
+    renderApprovals(state.approvals);
+  }
+
+  function syncExpertPanels() {
+    state.expertAssignments = buildExpertAssignments(state.projects, state.workload, state.approvals);
+    renderExpertsBoard(state.expertAssignments);
+    renderInsights(state.projects, state.workload, state.approvals);
+    renderPixelWorld(state.expertAssignments);
   }
 
   async function refreshAll() {
     try {
-      setStatus("Đang tải dữ liệu...", "loading");
-
-      const [summary, projects, workload, heatmap, approvals] = await Promise.all([
-        loadSummary(),
-        loadProjects(),
-        loadWorkload(),
-        loadHeatmap(),
-        loadApprovals(),
-      ]);
-
-      renderOverviewNotes(projects, workload, approvals);
-
-      setStatus("Đã tải dữ liệu thành công.", "success");
-      return { summary, projects, workload, heatmap, approvals };
+      setAppStatus("Đang tải dữ liệu...", "loading");
+      await Promise.all([loadSummary(), loadProjects(), loadWorkload(), loadHeatmap(), loadApprovals()]);
+      syncExpertPanels();
+      setAppStatus("Đã đồng bộ dashboard thành công.", "success");
     } catch (err) {
-      console.error("refreshAll error:", err);
-      setStatus(`Lỗi tải dữ liệu: ${err.message}`, "error");
-      throw err;
+      console.error(err);
+      setAppStatus(`Lỗi tải dữ liệu: ${err.message}`, "error");
     }
   }
 
   function readFormData(form) {
     const formData = new FormData(form);
     return {
-      project_code: String(formData.get("project_code") || "").trim() || undefined,
-      project_name: String(formData.get("project_name") || formData.get("name") || "").trim(),
-      project_type: String(formData.get("project_type") || "GENERAL").trim(),
-      stage: String(formData.get("stage") || "intake").trim(),
-      owner: String(formData.get("owner") || "Unassigned").trim(),
-      due_date: String(formData.get("due_date") || "").trim() || undefined,
+      project_code: (formData.get("project_code") || "").toString().trim() || undefined,
+      project_name: (formData.get("project_name") || "").toString().trim(),
+      project_type: (formData.get("project_type") || "GENERAL").toString().trim(),
+      stage: (formData.get("stage") || "intake").toString().trim(),
+      owner: (formData.get("owner") || "Unassigned").toString().trim(),
+      due_date: (formData.get("due_date") || "").toString().trim() || undefined,
     };
   }
 
   async function handleCreateProject(event) {
     event.preventDefault();
-
-    const form = event.currentTarget;
-    const msgEl = $(SELECTORS.createProjectMessage);
-    const submitBtn =
-      form.querySelector('button[type="submit"]') || $(SELECTORS.createProjectButton);
-
+    const submitBtn = document.getElementById("createProjectBtn");
     try {
-      if (submitBtn) submitBtn.disabled = true;
-      if (msgEl) {
-        msgEl.textContent = "Đang tạo project...";
-        msgEl.dataset.state = "loading";
-      }
-
-      const payload = readFormData(form);
-
+      submitBtn.disabled = true;
+      el.formStatus.textContent = "Đang tạo project...";
+      const payload = readFormData(el.projectForm);
       if (!payload.project_name) {
         throw new Error("Vui lòng nhập Project Name.");
       }
-
-      const result = await fetchJson("/api/projects", {
-        method: "POST",
-        body: payload,
-      });
-
-      if (msgEl) {
-        msgEl.textContent = `Tạo thành công: ${result.project_code || payload.project_name}`;
-        msgEl.dataset.state = "success";
-      }
-
-      form.reset();
+      const result = await fetchJson("/api/projects", { method: "POST", body: payload });
+      el.formStatus.textContent = `Tạo thành công: ${result.project_code || payload.project_name}`;
+      el.projectForm.reset();
       await refreshAll();
     } catch (err) {
-      console.error("handleCreateProject error:", err);
-      if (msgEl) {
-        msgEl.textContent = `Tạo project thất bại: ${err.message}`;
-        msgEl.dataset.state = "error";
-      } else {
-        setStatus(`Tạo project thất bại: ${err.message}`, "error");
-      }
+      console.error(err);
+      el.formStatus.textContent = `Tạo project thất bại: ${err.message}`;
     } finally {
-      if (submitBtn) submitBtn.disabled = false;
+      submitBtn.disabled = false;
     }
   }
 
-  function bindEvents() {
-    const form = $(SELECTORS.createProjectForm);
-    if (form) {
-      form.addEventListener("submit", handleCreateProject);
+  async function bootstrap() {
+    if (!API_BASE) {
+      setAppStatus("Thiếu APP_CONFIG.apiBaseUrl trong config.js", "error");
+      return;
     }
 
-    $all(SELECTORS.refreshButtons).forEach((btn) => {
-      btn.addEventListener("click", function () {
-        refreshAll();
-      });
-    });
-  }
+    try {
+      state.pixelAssets = await loadPixelAssets();
+    } catch (err) {
+      console.warn("Không thể tải pixel assets đầy đủ", err);
+    }
 
-  function bootstrap() {
-    bindEvents();
-    refreshAll().catch((err) => {
-      console.error("bootstrap error:", err);
-    });
+    el.projectForm?.addEventListener("submit", handleCreateProject);
+    el.refreshBtn?.addEventListener("click", refreshAll);
+    await refreshAll();
   }
 
   if (document.readyState === "loading") {
