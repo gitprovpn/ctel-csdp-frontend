@@ -546,10 +546,8 @@
     const project = state.projects.find((p) => String(p.id) === String(projectId));
     if (!project) return;
 
-    state.activeProjectId =
-      state.activeProjectId === projectId ? null : projectId;
-    state.activeExpert =
-      state.activeProjectId ? safeText(project.owner, null) : null;
+    state.activeProjectId = state.activeProjectId === projectId ? null : projectId;
+    state.activeExpert = state.activeProjectId ? safeText(project.owner, null) : null;
 
     renderAll();
   }
