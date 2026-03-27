@@ -1,538 +1,222 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyber Solution Delivery Platform</title>
-  <style>
-    :root {
-      --bg-1: #07101d;
-      --bg-2: #0b1220;
-      --panel: rgba(18, 27, 44, 0.92);
-      --panel-2: rgba(24, 35, 56, 0.92);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(96, 165, 250, 0.18);
-      --text: #eaf1ff;
-      --muted: #94a3b8;
-      --accent: #60a5fa;
-      --accent-2: #22d3ee;
-      --ok: #22c55e;
-      --risk: #f59e0b;
-      --delay: #f97316;
-      --blocked: #ef4444;
-      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-      --radius: 20px;
-      --radius-sm: 14px;
-      --maxw: 1360px;
-    }
-
-    * { box-sizing: border-box; }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      min-height: 100%;
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 25%),
-        radial-gradient(circle at top right, rgba(96, 165, 250, 0.10), transparent 28%),
-        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
-    }
-
-    body { line-height: 1.45; }
-
-    .app {
-      width: min(var(--maxw), calc(100% - 28px));
-      margin: 20px auto 40px;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-      padding: 18px 20px;
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(17, 27, 45, 0.86), rgba(11, 18, 32, 0.92));
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-    }
-
-    .brand h1 {
-      margin: 0 0 6px;
-      font-size: 30px;
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-    }
-
-    .brand p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      max-width: 720px;
-    }
-
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      appearance: none;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: linear-gradient(180deg, #1c2a44 0%, #121c2f 100%);
-      color: var(--text);
-      padding: 11px 16px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 14px;
-      box-shadow: var(--shadow);
-      transition: transform 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      border-color: var(--border-strong);
-    }
-
-    .status-bar {
-      margin-bottom: 18px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--muted);
-      font-size: 14px;
-      backdrop-filter: blur(8px);
-    }
-
-    .status-bar[data-state="loading"] { color: var(--accent-2); }
-    .status-bar[data-state="success"] { color: #86efac; }
-    .status-bar[data-state="error"] { color: #fca5a5; }
-
-    .section { margin-top: 18px; }
-    .grid { display: grid; gap: 16px; }
-
-    .stats-grid {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-
-    .two-col {
-      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
-      align-items: start;
-    }
-
-    .panel {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      backdrop-filter: blur(10px);
-    }
-
-    .panel-header {
-      padding: 18px 18px 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 14px;
-    }
-
-    .panel-title {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    .panel-subtitle {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .panel-body { padding: 18px; }
-
-    .stat-card {
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
-      min-height: 110px;
-      background: linear-gradient(180deg, rgba(29, 43, 68, 0.88), rgba(17, 27, 43, 0.95));
-    }
-
-    .stat-label {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 10px;
-    }
-
-    .stat-value {
-      font-size: 30px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .stat-card.ok .stat-value { color: #86efac; }
-    .stat-card.risk .stat-value { color: #fde68a; }
-    .stat-card.delay .stat-value { color: #fdba74; }
-    .stat-card.blocked .stat-value { color: #fca5a5; }
-    .stat-card.accent .stat-value { color: #93c5fd; }
-
-    .project-list,
-    .heatmap-list,
-    .expert-list,
-    .assignment-queue {
-      display: grid;
-      gap: 14px;
-    }
-
-    .project-card,
-    .list-row {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.035);
-    }
-
-    .project-card.is-active {
-      outline: 2px solid rgba(34, 211, 238, 0.55);
-      box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.08);
-    }
-
-    .project-card__header,
-    .list-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .project-card__code {
-      font-size: 12px;
-      color: var(--accent-2);
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .project-card__badge {
-      font-size: 12px;
-      border-radius: 999px;
-      padding: 6px 10px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text);
-      text-transform: lowercase;
-      white-space: nowrap;
-    }
-
-    .project-card__title {
-      font-size: 18px;
-      font-weight: 800;
-      margin: 10px 0;
-      letter-spacing: -0.02em;
-    }
-
-    .project-card__meta,
-    .project-card__metrics {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px 14px;
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 10px;
-    }
-
-    .project-card__reason {
-      margin-top: 12px;
-      color: #dbe7ff;
-      font-size: 13px;
-    }
-
-    .status-on-track { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18); }
-    .status-at-risk { box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18); }
-    .status-delayed { box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.18); }
-    .status-blocked { box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.22); }
-
-    .list-row__title {
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    .list-row__value {
-      color: var(--accent-2);
-      font-weight: 800;
-      font-size: 18px;
-    }
-
-    .empty-state {
-      border: 1px dashed rgba(255, 255, 255, 0.16);
-      border-radius: 14px;
-      padding: 14px;
-      color: var(--muted);
-      text-align: center;
-      font-size: 14px;
-    }
-
-    .expert-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
-    .pixel-floor-shell {
-      display: grid;
-      gap: 14px;
-    }
-
-    .pixel-floor {
-      position: relative;
-      min-height: 420px;
-      border-radius: 18px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background:
-        linear-gradient(180deg, rgba(4, 18, 44, 0.92), rgba(5, 16, 34, 0.96)),
-        repeating-linear-gradient(
-          90deg,
-          rgba(255,255,255,0.02) 0 1px,
-          transparent 1px 24px
-        ),
-        repeating-linear-gradient(
-          0deg,
-          rgba(255,255,255,0.02) 0 1px,
-          transparent 1px 24px
-        );
-    }
-
-    .pixel-floor-scene {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      min-height: 420px;
-      overflow: hidden;
-    }
-
-    .pixel-zone {
-      position: absolute;
-      border: 1px dashed rgba(96, 165, 250, 0.12);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .pixel-zone-a { left: 4%; top: 8%; width: 26%; height: 34%; }
-    .pixel-zone-b { left: 36%; top: 18%; width: 28%; height: 32%; }
-    .pixel-zone-c { right: 6%; bottom: 10%; width: 24%; height: 30%; }
-
-    .pixel-agent {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      display: grid;
-      justify-items: center;
-      gap: 6px;
-      cursor: pointer;
-      animation: patrol 4.5s ease-in-out infinite alternate;
-      z-index: 2;
-    }
-
-    .pixel-agent.is-active {
-      filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.55));
-    }
-
-    .pixel-project-badge {
-      min-width: 64px;
-      text-align: center;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 800;
-      color: #fff;
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(34, 211, 238, 0.45);
-      letter-spacing: 0.03em;
-    }
-
-    .pixel-project-badge.status-blocked { border-color: rgba(239, 68, 68, 0.45); }
-    .pixel-project-badge.status-delayed { border-color: rgba(249, 115, 22, 0.45); }
-    .pixel-project-badge.status-at-risk { border-color: rgba(245, 158, 11, 0.45); }
-
-    .pixel-character {
-      width: 18px;
-      height: 24px;
-      position: relative;
-      image-rendering: pixelated;
-      background:
-        linear-gradient(#f8c9a7 0 0) 6px 0/6px 6px no-repeat,
-        linear-gradient(#d946ef 0 0) 4px 6px/10px 7px no-repeat,
-        linear-gradient(#f8fafc 0 0) 3px 13px/12px 7px no-repeat,
-        linear-gradient(#f97316 0 0) 1px 8px/3px 6px no-repeat,
-        linear-gradient(#f97316 0 0) 14px 8px/3px 6px no-repeat,
-        linear-gradient(#111827 0 0) 4px 20px/4px 4px no-repeat,
-        linear-gradient(#111827 0 0) 10px 20px/4px 4px no-repeat;
-      filter: drop-shadow(0 2px 0 rgba(0,0,0,0.2));
-    }
-
-    .pixel-nameplate {
-      padding: 3px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #dbeafe;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      white-space: nowrap;
-    }
-
-    @keyframes patrol {
-      from { transform: translate(-50%, -50%); }
-      to { transform: translate(calc(-50% + 10px), calc(-50% - 6px)); }
-    }
-
-    .footer-note {
-      margin-top: 18px;
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    @media (max-width: 1200px) {
-      .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .two-col { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 720px) {
-      .app {
-        width: min(100% - 18px, 100%);
-        margin: 12px auto 28px;
-      }
-
-      .topbar { padding: 16px; }
-      .brand h1 { font-size: 25px; }
-      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .project-card__meta,
-      .project-card__metrics { grid-template-columns: 1fr; }
-      .pixel-floor,
-      .pixel-floor-scene { min-height: 360px; }
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyber Solution Delivery Platform v2.1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app">
+  <div class="app-shell">
     <header class="topbar">
       <div class="brand">
+        <div class="eyebrow">CTEL • Solution Architect Cyber Security • v2.1</div>
         <h1>Cyber Solution Delivery Platform</h1>
-        <p>Compact control tower cho team Solution Architect Cyber Security với project cards, expert dispatch, ops insights và pixel operations floor.</p>
+        <p>Control tower theo dõi tiến độ, health score, workload và đội chuyên gia đang trực tiếp phụ trách từng dự án.</p>
       </div>
-      <div class="topbar-actions">
-        <button class="btn" data-action="refresh" type="button">Refresh Dashboard</button>
+      <div class="actions">
+        <button id="refreshBtn" class="btn btn-primary" type="button">Refresh Dashboard</button>
       </div>
     </header>
 
-    <div id="app-status" class="status-bar" data-state="idle">Sẵn sàng.</div>
+    <div id="appStatus" class="status-banner" data-state="idle">Sẵn sàng.</div>
 
-    <section class="section grid stats-grid">
-      <div class="stat-card accent">
-        <div class="stat-label">Total Projects</div>
-        <div class="stat-value" id="total-projects">0</div>
-      </div>
-      <div class="stat-card ok">
-        <div class="stat-label">On Track</div>
-        <div class="stat-value" id="on-track">0</div>
-      </div>
-      <div class="stat-card risk">
-        <div class="stat-label">At Risk</div>
-        <div class="stat-value" id="at-risk">0</div>
-      </div>
-      <div class="stat-card delay">
-        <div class="stat-label">Delayed</div>
-        <div class="stat-value" id="delayed">0</div>
-      </div>
-      <div class="stat-card blocked">
-        <div class="stat-label">Blocked</div>
-        <div class="stat-value" id="blocked">0</div>
-      </div>
-      <div class="stat-card accent">
-        <div class="stat-label">Avg Health Score</div>
-        <div class="stat-value" id="avg-health-score">0</div>
-      </div>
-    </section>
+    <main class="container">
+      <section class="cards" id="summaryCards"></section>
 
-    <section class="section grid two-col">
-      <div class="panel">
-        <div class="panel-header">
+      <section class="panel filters-panel">
+        <div class="panel-head">
           <div>
-            <h2 class="panel-title">Project Control Tower</h2>
-            <p class="panel-subtitle">Danh sách project hiện có trong D1 database. Click vào project để focus chuyên gia tương ứng.</p>
+            <h2>Project Filters</h2>
+            <p>Lọc nhanh theo loại dự án, stage và health status. Click chuyên gia để highlight project họ đang handle.</p>
           </div>
         </div>
-        <div class="panel-body">
-          <div id="project-list" class="project-list"></div>
+        <div class="filters-grid">
+          <div class="field">
+            <label for="filterProjectType">Project Type</label>
+            <select id="filterProjectType">
+              <option value="all">All</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filterStage">Stage</label>
+            <select id="filterStage">
+              <option value="all">All</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filterHealth">Health Status</label>
+            <select id="filterHealth">
+              <option value="all">All</option>
+              <option value="on_track">on_track</option>
+              <option value="at_risk">at_risk</option>
+              <option value="delayed">delayed</option>
+              <option value="blocked">blocked</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button id="resetFiltersBtn" class="btn" type="button">Reset Filters</button>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="grid" style="gap:16px;">
-        <div class="panel">
-          <div class="panel-header">
+      <section class="content-grid hero-grid">
+        <section class="panel panel-projects">
+          <div class="panel-head">
             <div>
-              <h2 class="panel-title">Ops Insights</h2>
-              <p class="panel-subtitle">Tóm tắt nhanh tình trạng vận hành hiện tại.</p>
+              <h2>Project Control Tower</h2>
+              <p>Trạng thái vận hành dự án và health scoring theo business rules.</p>
+            </div>
+            <div id="projectCounter" class="subtext">0 project</div>
+          </div>
+          <div id="projectList" class="project-list"></div>
+        </section>
+
+        <section class="panel panel-form">
+          <div class="panel-head">
+            <div>
+              <h2>Create Project</h2>
+              <p>Tạo nhanh dự án mới để test end-to-end trên Worker + D1.</p>
             </div>
           </div>
-          <div class="panel-body">
-            <div id="overview-notes"></div>
-          </div>
-        </div>
+          <form id="projectForm" class="form-grid">
+            <div class="field">
+              <label for="project_code">Project Code</label>
+              <input id="project_code" name="project_code" placeholder="CTEL-SA-2026-003" />
+            </div>
+            <div class="field field-span-2">
+              <label for="project_name">Project Name</label>
+              <input id="project_name" name="project_name" placeholder="VD: Customer Zero Trust Readiness" required />
+            </div>
+            <div class="field">
+              <label for="project_type">Project Type</label>
+              <select id="project_type" name="project_type">
+                <option value="presales">Presales</option>
+                <option value="delivery">Delivery</option>
+                <option value="review">Review</option>
+                <option value="handover">Handover</option>
+                <option value="GENERAL">General</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="stage">Stage</label>
+              <select id="stage" name="stage">
+                <option value="intake">Intake</option>
+                <option value="analysis">Analysis</option>
+                <option value="design_review">Design Review</option>
+                <option value="review">Review</option>
+                <option value="approval">Approval</option>
+                <option value="execution">Execution</option>
+                <option value="validation">Validation</option>
+                <option value="handover">Handover</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="owner">Owner</label>
+              <input id="owner" name="owner" placeholder="VD: Phúc" />
+            </div>
+            <div class="field">
+              <label for="due_date">Due Date</label>
+              <input id="due_date" name="due_date" type="date" />
+            </div>
+            <div class="form-actions field-span-2">
+              <button type="submit" class="btn btn-primary" id="createProjectBtn">Create Project</button>
+              <div id="formStatus" class="form-status"></div>
+            </div>
+          </form>
+        </section>
+      </section>
 
-        <div class="panel">
-          <div class="panel-header">
+      <section class="content-grid split-grid">
+        <section class="panel">
+          <div class="panel-head">
             <div>
-              <h2 class="panel-title">Risk / Blocker Heatmap</h2>
-              <p class="panel-subtitle">Tổng hợp rủi ro và blocker đang mở.</p>
+              <h2>Expert Dispatch Board</h2>
+              <p>Click vào chuyên gia để highlight các project đang phụ trách.</p>
+            </div>
+            <div id="activeExpertBadge" class="subtext">No expert selected</div>
+          </div>
+          <div id="expertsBoard" class="experts-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Ops Insights</h2>
+              <p>Điểm nổi bật cần chú ý ngay trong ngày.</p>
             </div>
           </div>
-          <div class="panel-body">
-            <div id="heatmap-list" class="heatmap-list"></div>
+          <div id="overviewNotes" class="insight-list"></div>
+        </section>
+      </section>
+
+      <section class="content-grid split-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Workload</h2>
+              <p>Số lượng active tasks theo owner.</p>
+            </div>
           </div>
-        </div>
-      </div>
-    </section>
+          <div id="workloadList" class="list-stack"></div>
+        </section>
 
-    <section class="section panel">
-      <div class="panel-header">
-        <div>
-          <h2 class="panel-title">Expert Dispatch Board</h2>
-          <p class="panel-subtitle">Click vào chuyên gia để lọc nhanh các project họ đang handle.</p>
-        </div>
-      </div>
-      <div class="panel-body">
-        <div id="expert-board" class="expert-grid"></div>
-      </div>
-    </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Pending Approvals</h2>
+              <p>Các approval đang chờ xử lý.</p>
+            </div>
+          </div>
+          <div id="approvalList" class="list-stack"></div>
+        </section>
+      </section>
 
-    <section class="section panel">
-      <div class="panel-header">
-        <div>
-          <h2 class="panel-title">Pixel Operations Floor</h2>
-          <p class="panel-subtitle">Mô phỏng vị trí chuyên gia và assignment chính trên dashboard theo phong cách pixel.</p>
-        </div>
-      </div>
-      <div class="panel-body pixel-floor-shell">
-        <div id="pixel-floor" class="pixel-floor"></div>
-        <div id="assignment-queue" class="assignment-queue"></div>
-      </div>
-    </section>
+      <section class="content-grid split-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Risk / Blocker Heatmap</h2>
+              <p>Rủi ro và blocker đang mở theo mức độ.</p>
+            </div>
+          </div>
+          <div id="heatmapList" class="list-stack"></div>
+        </section>
 
-    <div class="footer-note">
-      Frontend GitHub Pages + Backend Cloudflare Worker + D1/KV/Queue
-    </div>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Kanban Overview</h2>
+              <p>Tự xuống dòng theo màn hình, không scroll ngang.</p>
+            </div>
+          </div>
+          <div id="kanbanBoard" class="kanban-board"></div>
+        </section>
+      </section>
+
+      <section class="panel pixel-panel">
+        <div class="panel-head pixel-head">
+          <div>
+            <h2>Pixel Operations Floor</h2>
+            <p>Khu vực mô phỏng đội chuyên gia đang di chuyển nhẹ giữa các zone theo assignment thực tế.</p>
+          </div>
+          <div class="pixel-legend">Pixel Interface • Live Assignment View • Animated</div>
+        </div>
+        <div class="pixel-layout">
+          <div class="pixel-canvas-wrap">
+            <canvas id="pixelCanvas" width="896" height="512"></canvas>
+          </div>
+          <aside class="pixel-sidebar">
+            <div class="pixel-sidebar-title">Current Assignment Queue</div>
+            <div id="pixelRoster" class="pixel-roster"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script src="./config.js"></script>
