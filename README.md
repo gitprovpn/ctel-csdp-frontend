@@ -58,3 +58,10 @@ Nếu tên `owner` từ backend không khớp với danh sách team hiện tại
 - Click member card or sprite on pixel map to open assign panel
 - Select existing project, update PIC, stage, status, and note
 - Front-end no longer stores state locally; updates are persisted via backend API
+
+
+## v6.2 movement simulation
+- Nhân vật tự di chuyển giữa bàn làm việc và zone dự án
+- Có mô phỏng trao đổi ngắn giữa 2 thành viên tại khu meeting
+- Không thay đổi backend schema; toàn bộ animation được suy ra từ dữ liệu hiện có
+- Click trực tiếp vào nhân vật vẫn mở panel assign/update như bản v6

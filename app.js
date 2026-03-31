@@ -73,13 +73,19 @@
     unknown: { dx: 0, dy: -100, minW: 122, maxW: 188, align: "center" }
   };
 
-  const state = { projects: [], users: [], projectOptions: [], activeMemberId: null, connectionOk: false, connectionMessage: "", tick: 0, pixelAssets: null, animationFrame: null, placedLabels: [], spriteHitboxes: [], selectedProjectId: null, assignPanel: { open: false, memberId: null, projectId: null } };
+  const state = {
+    projects: [], users: [], projectOptions: [], activeMemberId: null, connectionOk: false, connectionMessage: "", tick: 0,
+    pixelAssets: null, animationFrame: null, placedLabels: [], spriteHitboxes: [], selectedProjectId: null,
+    assignPanel: { open: false, memberId: null, projectId: null },
+    simulation: { startedAt: 0, lastFrameAt: 0, members: new Map(), chats: [] }
+  };
 
   init();
 
   async function init() {
     bindEvents();
     populateStaticSelects();
+    initSimulation();
     await loadPixelAssets();
     await refreshData();
   }
@@ -94,6 +100,148 @@
     if (els.assignSheet) els.assignSheet.addEventListener("click", (event) => { if (event.target === els.assignSheet) closeAssignPanel(); });
     document.addEventListener("keydown", (event) => { if (event.key === "Escape" && state.assignPanel.open) closeAssignPanel(); });
     if (els.assignProjectSelect) els.assignProjectSelect.addEventListener("change", handleProjectSelectChange);
+  }
+
+  function initSimulation() {
+    state.simulation.startedAt = performance.now();
+    state.simulation.lastFrameAt = performance.now();
+    state.simulation.members = new Map();
+    state.simulation.chats = [];
+    MEMBERS.forEach((member) => state.simulation.members.set(member.id, createSimMember(member)));
+  }
+
+  function createSimMember(member) {
+    return {
+      memberId: member.id,
+      x: member.basePos.x,
+      y: member.basePos.y,
+      targetX: member.basePos.x,
+      targetY: member.basePos.y,
+      speed: 34 + (member.userId || 1) * 2,
+      mode: "working",
+      facing: "down",
+      timer: randomRange(1.4, 3.6),
+      projectId: null
+    };
+  }
+
+  function ensureSimulationMembers() {
+    MEMBERS.forEach((member) => {
+      if (!state.simulation.members.has(member.id)) state.simulation.members.set(member.id, createSimMember(member));
+    });
+  }
+
+  function getWorkAnchor(memberId, projectCount) {
+    const member = findMember(memberId) || MEMBERS[0];
+    const seats = [
+      { x: member.basePos.x, y: member.basePos.y },
+      { x: member.basePos.x + 10, y: member.basePos.y - 8 },
+      { x: member.basePos.x - 9, y: member.basePos.y + 6 }
+    ];
+    return seats[Math.max(0, Math.min(seats.length - 1, projectCount > 1 ? 1 : 0))];
+  }
+
+  function getStageAnchor(zone, memberId) {
+    const member = findMember(memberId) || MEMBERS[0];
+    const base = ZONES[zone] || ZONES[member.zone] || ZONES.unknown;
+    const offsets = {
+      presales: { x: -8, y: 16 }, intake: { x: -10, y: 12 }, analysis: { x: -8, y: 10 },
+      design_review: { x: -10, y: 12 }, meeting: { x: 0, y: 16 }, execution: { x: -3, y: 16 },
+      review: { x: 0, y: 14 }, validation: { x: 4, y: 14 }, support: { x: 2, y: 14 },
+      handover: { x: 4, y: 16 }, approval: { x: 0, y: 16 }, closed: { x: 6, y: 12 }, unknown: { x: 0, y: 16 }
+    };
+    const offset = offsets[zone] || offsets.unknown;
+    return { x: base.x + offset.x, y: base.y + offset.y };
+  }
+
+  function scheduleSimulationIntent(sim, dt) {
+    sim.timer -= dt;
+    if (sim.timer > 0) return;
+
+    const ownProjects = state.projects.filter((project) => project.ownerId === sim.memberId);
+    const leadProject = pickLeadProject(ownProjects);
+    const activityBias = ownProjects.length ? 0.78 : 0.42;
+
+    if (leadProject && Math.random() < activityBias) {
+      const anchor = getStageAnchor(leadProject.zone, sim.memberId);
+      setSimTarget(sim, anchor.x, anchor.y, 'project_follow');
+      sim.projectId = leadProject.id;
+      sim.timer = randomRange(2.4, 4.8);
+      return;
+    }
+
+    const canChat = !state.simulation.chats.some((chat) => chat.memberIds.includes(sim.memberId));
+    if (canChat && Math.random() < 0.28) {
+      const partner = pickChatPartner(sim.memberId);
+      if (partner) {
+        startChat(sim.memberId, partner.memberId);
+        sim.timer = randomRange(3.4, 5.2);
+        return;
+      }
+    }
+
+    const anchor = getWorkAnchor(sim.memberId, ownProjects.length);
+    setSimTarget(sim, anchor.x, anchor.y, ownProjects.length ? 'working' : 'idle');
+    sim.projectId = leadProject ? leadProject.id : null;
+    sim.timer = randomRange(2.2, 4.6);
+  }
+
+  function pickChatPartner(memberId) {
+    const self = state.simulation.members.get(memberId);
+    if (!self) return null;
+    const pool = MEMBERS
+      .filter((member) => member.id !== memberId)
+      .map((member) => state.simulation.members.get(member.id))
+      .filter(Boolean)
+      .filter((sim) => !state.simulation.chats.some((chat) => chat.memberIds.includes(sim.memberId)));
+    if (!pool.length) return null;
+    pool.sort((a, b) => distance(self.x, self.y, a.x, a.y) - distance(self.x, self.y, b.x, b.y));
+    return pool[0] || null;
+  }
+
+  function startChat(memberIdA, memberIdB) {
+    const simA = state.simulation.members.get(memberIdA);
+    const simB = state.simulation.members.get(memberIdB);
+    if (!simA || !simB) return;
+    const meeting = ZONES.meeting || { x: 336, y: 176 };
+    setSimTarget(simA, meeting.x - 20, meeting.y + 20, 'chatting');
+    setSimTarget(simB, meeting.x + 20, meeting.y + 20, 'chatting');
+    simA.timer = randomRange(3.2, 4.8);
+    simB.timer = simA.timer;
+    const project = pickLeadProject(state.projects.filter((project) => project.ownerId === memberIdA || project.ownerId === memberIdB));
+    const text = project ? `Trao đổi: ${truncateText(project.name, 20)}` : 'Đang trao đổi';
+    state.simulation.chats.push({ memberIds: [memberIdA, memberIdB], until: performance.now() + randomRange(2200, 3600), text });
+  }
+
+  function updateSimulation(dt) {
+    ensureSimulationMembers();
+    state.simulation.chats = state.simulation.chats.filter((chat) => chat.until > performance.now());
+    state.simulation.members.forEach((sim) => {
+      scheduleSimulationIntent(sim, dt);
+      moveSimMember(sim, dt);
+    });
+  }
+
+  function setSimTarget(sim, x, y, mode) {
+    sim.targetX = x;
+    sim.targetY = y;
+    sim.mode = mode;
+  }
+
+  function moveSimMember(sim, dt) {
+    const dx = sim.targetX - sim.x;
+    const dy = sim.targetY - sim.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.8) {
+      sim.x = sim.targetX;
+      sim.y = sim.targetY;
+      return true;
+    }
+    const step = Math.min(dist, sim.speed * dt);
+    sim.x += (dx / dist) * step;
+    sim.y += (dy / dist) * step;
+    sim.facing = Math.abs(dx) > Math.abs(dy) ? (dx >= 0 ? 'right' : 'left') : (dy >= 0 ? 'down' : 'up');
+    return false;
   }
 
   async function refreshData() {
@@ -325,7 +473,17 @@
   }
 
   function drawPixelMap() {
-    const canvas = els.pixelCanvas; if (!canvas || !ctx) return; state.tick += 1; state.spriteHitboxes = []; ctx.clearRect(0, 0, canvas.width, canvas.height); if (state.pixelAssets?.house) { drawPixelSceneWithAssets(canvas.width, canvas.height); return; } drawFallbackPixelScene(canvas.width, canvas.height);
+    const canvas = els.pixelCanvas;
+    if (!canvas || !ctx) return;
+    const now = performance.now();
+    const dt = Math.min(0.05, Math.max(0.012, (now - (state.simulation.lastFrameAt || now)) / 1000));
+    state.simulation.lastFrameAt = now;
+    updateSimulation(dt);
+    state.tick += 1;
+    state.spriteHitboxes = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (state.pixelAssets?.house) { drawPixelSceneWithAssets(canvas.width, canvas.height); return; }
+    drawFallbackPixelScene(canvas.width, canvas.height);
   }
 
   function drawPixelSceneWithAssets(width, height) {
@@ -340,23 +498,71 @@
     const labelQueue = [];
     MEMBERS.forEach((member, index) => {
       const own = visibleProjects.filter((p) => p.ownerId === member.id);
-      const wobbleX = Math.sin((state.tick + index * 10) / 14) * 2;
-      const wobbleY = Math.cos((state.tick + index * 8) / 18) * 1.5;
-      const baseX = member.basePos.x + wobbleX;
-      const baseY = member.basePos.y + wobbleY;
+      const sim = state.simulation.members.get(member.id) || createSimMember(member);
+      const wobbleX = Math.sin((state.tick + index * 10) / 18) * 0.6;
+      const wobbleY = Math.cos((state.tick + index * 8) / 24) * 0.6;
+      const baseX = sim.x + wobbleX;
+      const baseY = sim.y + wobbleY;
       state.spriteHitboxes.push({ x: Math.round(baseX - 24), y: Math.round(baseY - 42), w: 48, h: 48, memberId: member.id });
-      if (state.pixelAssets?.expertImages?.[member.id]) drawCompositeSprite(baseX, baseY, member.id); else drawFallbackSprite(baseX - 12, baseY - 6, member.color);
+      if (state.pixelAssets?.expertImages?.[member.id]) drawCompositeSprite(baseX, baseY, member.id, sim); else drawFallbackSprite(baseX - 12, baseY - 6, member.color, sim);
       const isActive = state.activeMemberId === member.id || state.assignPanel.memberId === member.id;
-      if (isActive) { ctx.strokeStyle = member.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(baseX, baseY - 24, 18 + Math.sin(state.tick / 4) * 2, 0, Math.PI * 2); ctx.stroke(); }
-      own.forEach((project, itemIndex) => { const markerZone = ZONES[project.zone] || ZONES[member.zone] || ZONES.unknown; const cols = 3; const offsetX = (itemIndex % cols) * 11; const offsetY = Math.floor(itemIndex / cols) * 11; const px = markerZone.x - 10 + offsetX; const py = markerZone.y - 32 - offsetY; fillRect(px, py, 8, 8, member.color); strokeRect(px, py, 8, 8, project.status === "blocked" ? "#fecdd3" : "#07111f"); });
-      const leadProject = pickLeadProject(own); labelQueue.push({ member, baseX, baseY, project: leadProject, count: own.length });
+      if (isActive) {
+        ctx.strokeStyle = member.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(baseX, baseY - 24, 18 + Math.sin(state.tick / 4) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      own.forEach((project, itemIndex) => {
+        const markerZone = ZONES[project.zone] || ZONES[member.zone] || ZONES.unknown;
+        const cols = 3;
+        const offsetX = (itemIndex % cols) * 11;
+        const offsetY = Math.floor(itemIndex / cols) * 11;
+        const px = markerZone.x - 10 + offsetX;
+        const py = markerZone.y - 32 - offsetY;
+        fillRect(px, py, 8, 8, member.color);
+        strokeRect(px, py, 8, 8, project.status === "blocked" ? "#fecdd3" : "#07111f");
+      });
+      const leadProject = pickLeadProject(own);
+      labelQueue.push({ member, baseX, baseY, project: leadProject, count: own.length, sim });
     });
+    drawChatLinks();
     labelQueue.forEach((item) => drawMemberLabel(item));
   }
-  function drawMemberLabel({ member, baseX, baseY, project, count }) {
+
+  function drawChatLinks() {
+    state.simulation.chats.forEach((chat) => {
+      const [aId, bId] = chat.memberIds;
+      const simA = state.simulation.members.get(aId);
+      const simB = state.simulation.members.get(bId);
+      if (!simA || !simB) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(96, 165, 250, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(simA.x, simA.y - 24);
+      ctx.lineTo(simB.x, simB.y - 24);
+      ctx.stroke();
+      ctx.restore();
+      const midX = (simA.x + simB.x) / 2;
+      const midY = (simA.y + simB.y) / 2 - 42;
+      ctx.font = '10px Inter';
+      const bubbleW = clamp(ctx.measureText(chat.text).width + 18, 82, 160);
+      fillRect(midX - bubbleW / 2, midY - 10, bubbleW, 20, 'rgba(7,17,31,.9)');
+      strokeRect(midX - bubbleW / 2, midY - 10, bubbleW, 20, '#60a5fa');
+      ctx.fillStyle = '#dbeafe';
+      ctx.textAlign = 'center';
+      ctx.fillText(chat.text, midX, midY + 4);
+      ctx.textAlign = 'left';
+    });
+  }
+
+  function drawMemberLabel({ member, baseX, baseY, project, count, sim }) {
     const layout = LABEL_LAYOUT[member.id] || LABEL_LAYOUT.unknown;
     const title = member.name;
-    const subtitle = project ? project.name : (count ? `${count} dự án đang theo` : "Chưa có dự án");
+    const modeLabel = sim?.mode === "chatting" ? "Đang trao đổi" : sim?.mode === "project_follow" ? "Đang follow" : sim?.mode === "idle" ? "Đang rảnh" : "Đang làm việc";
+    const subtitle = project ? `${modeLabel}: ${project.name}` : (count ? `${modeLabel}: ${count} dự án` : modeLabel);
     const innerPaddingX = 10;
     const innerPaddingTop = 8;
     const titleLineHeight = 14;
@@ -519,10 +725,19 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  function drawCompositeSprite(x, y, memberId) {
+  function randomRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function distance(x1, y1, x2, y2) {
+    return Math.hypot(x2 - x1, y2 - y1);
+  }
+
+  function drawCompositeSprite(x, y, memberId, sim) {
     const assets = state.pixelAssets?.expertImages?.[memberId];
     if (!assets) return;
-    const sx = 0;
+    const frame = sim && distance(sim.x, sim.y, sim.targetX, sim.targetY) > 2 ? Math.floor(state.tick / 8) % 4 : 0;
+    const sx = frame * 32;
     const drawX = Math.round(x - 24);
     const drawY = Math.round(y - 42);
     ctx.imageSmoothingEnabled = false;
@@ -531,11 +746,13 @@
     ctx.drawImage(assets.hair, sx, 0, 32, 32, drawX, drawY, 48, 48);
   }
 
-  function drawFallbackSprite(x, y, color) {
+  function drawFallbackSprite(x, y, color, sim) {
+    const walking = sim && distance(sim.x, sim.y, sim.targetX, sim.targetY) > 2;
+    const legOffset = walking ? (Math.floor(state.tick / 8) % 2 === 0 ? 1 : -1) : 0;
     fillRect(x + 4, y, 8, 8, "#f8d7b5");
     fillRect(x + 2, y + 8, 12, 10, color);
-    fillRect(x, y + 18, 6, 8, color);
-    fillRect(x + 10, y + 18, 6, 8, color);
+    fillRect(x + legOffset, y + 18, 6, 8, color);
+    fillRect(x + 10 - legOffset, y + 18, 6, 8, color);
   }
 
   function drawBackground(width, height) {
