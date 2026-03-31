@@ -43,23 +43,42 @@
   };
 
   const ctx = els.pixelCanvas.getContext("2d");
+
+  const ASSET_PATHS = {
+    house: "./assets/pixel/map/housemap.png",
+    sun: "./assets/pixel/map/sun.png",
+    moon: "./assets/pixel/map/moon.png"
+  };
+
+  const SPRITE_KEYS = {
+    phuc: "phuc",
+    thanh: "minh",
+    tuan: "linh",
+    phu: "nam",
+    an: "vy"
+  };
+
   const state = {
     projects: [],
     activeMemberId: null,
     connectionOk: false,
     connectionMessage: "",
-    tick: 0
+    tick: 0,
+    pixelAssets: null,
+    animationFrame: null
   };
 
   init();
 
-  function init() {
+  async function init() {
     bindEvents();
+    await loadPixelAssets();
     refreshData();
   }
 
   function bindEvents() {
     els.refreshBtn.addEventListener("click", refreshData);
+    window.addEventListener("resize", render);
   }
 
   async function refreshData() {
@@ -70,10 +89,12 @@
       state.projects = Array.isArray(projects) ? projects.map(normalizeProject) : [];
       setConnectionState("good", `Kết nối backend thành công • ${state.projects.length} dự án đã tải.`);
       render();
+      startPixelAnimation();
     } catch (error) {
       state.projects = [];
       setConnectionState("bad", `Không thể tải dữ liệu từ backend. ${error.message || error}`);
       render();
+      startPixelAnimation();
     }
   }
 
@@ -133,6 +154,44 @@
     renderProjects();
     renderLegend();
     drawPixelMap();
+  }
+
+  async function loadPixelAssets() {
+    try {
+      const [house, sun, moon] = await Promise.all([
+        loadImage(ASSET_PATHS.house),
+        loadImage(ASSET_PATHS.sun),
+        loadImage(ASSET_PATHS.moon)
+      ]);
+
+      const expertImages = {};
+      const spriteEntries = await Promise.all(MEMBERS.map(async (member) => {
+        const key = SPRITE_KEYS[member.id];
+        const [body, outfit, hair] = await Promise.all([
+          loadImage(`./assets/pixel/experts/${key}/body.png`),
+          loadImage(`./assets/pixel/experts/${key}/outfit.png`),
+          loadImage(`./assets/pixel/experts/${key}/hair.png`)
+        ]);
+        return [member.id, { body, outfit, hair }];
+      }));
+
+      spriteEntries.forEach(([id, assets]) => {
+        expertImages[id] = assets;
+      });
+      state.pixelAssets = { house, sun, moon, expertImages };
+    } catch (error) {
+      console.warn("Pixel assets could not be loaded", error);
+      state.pixelAssets = null;
+    }
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
   }
 
   function renderSummary() {
@@ -240,13 +299,102 @@
 
   function drawPixelMap() {
     const canvas = els.pixelCanvas;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!canvas || !ctx) return;
     state.tick += 1;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    drawBackground(canvas.width, canvas.height);
+    if (state.pixelAssets?.house) {
+      drawPixelSceneWithAssets(canvas.width, canvas.height);
+      return;
+    }
+
+    drawFallbackPixelScene(canvas.width, canvas.height);
+  }
+
+  function drawPixelSceneWithAssets(width, height) {
+    const { house, sun, moon } = state.pixelAssets;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(house, 0, 0, width, height);
+
+    const hour = new Date().getHours();
+    const skyAsset = hour >= 6 && hour < 18 ? sun : moon;
+    ctx.drawImage(skyAsset, 40, 28, 72, 72);
+
+    ctx.fillStyle = "rgba(6, 16, 29, 0.80)";
+    ctx.fillRect(18, 18, 270, 44);
+    ctx.strokeStyle = "rgba(96, 165, 250, 0.28)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 18, 270, 44);
+    ctx.fillStyle = "#f3f8ff";
+    ctx.font = "24px VT323";
+    ctx.textAlign = "left";
+    ctx.fillText("SA CTEL PROJECT MAP", 30, 46);
+
+    drawProjectedMarkers();
+  }
+
+  function drawFallbackPixelScene(width, height) {
+    drawBackground(width, height);
     drawZones();
     drawRoads();
-    drawPeopleAndProjects();
+    drawProjectedMarkers();
+  }
+
+  function drawProjectedMarkers() {
+    const visibleProjects = state.activeMemberId
+      ? state.projects.filter((p) => p.ownerId === state.activeMemberId)
+      : state.projects;
+
+    MEMBERS.forEach((member, index) => {
+      const own = visibleProjects.filter((p) => p.ownerId === member.id);
+      const zone = ZONES[member.zone] || ZONES.unknown;
+      const wobbleX = Math.sin((state.tick + index * 10) / 14) * 4;
+      const wobbleY = Math.cos((state.tick + index * 8) / 18) * 2;
+      const baseX = zone.x + wobbleX;
+      const baseY = zone.y + 30 + wobbleY;
+
+      if (state.pixelAssets?.expertImages?.[member.id]) {
+        drawCompositeSprite(baseX, baseY, member.id);
+      } else {
+        drawFallbackSprite(baseX - 12, baseY - 6, member.color);
+      }
+
+      const isActive = state.activeMemberId === member.id;
+      if (isActive) {
+        ctx.strokeStyle = member.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(baseX, baseY - 24, 19 + Math.sin(state.tick / 4) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      own.forEach((project, itemIndex) => {
+        const markerZone = ZONES[project.zone] || ZONES.unknown;
+        const px = markerZone.x - 38 + (itemIndex % 4) * 22;
+        const py = markerZone.y - 20 + Math.floor(itemIndex / 4) * 16;
+        fillRect(px, py, 12, 12, member.color);
+        strokeRect(px, py, 12, 12, project.status === "blocked" ? "#fecdd3" : "#07111f");
+      });
+    });
+  }
+
+  function drawCompositeSprite(x, y, memberId) {
+    const assets = state.pixelAssets?.expertImages?.[memberId];
+    if (!assets) return;
+    const sx = 0;
+    const drawX = Math.round(x - 24);
+    const drawY = Math.round(y - 42);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(assets.body, sx, 0, 32, 32, drawX, drawY, 48, 48);
+    ctx.drawImage(assets.outfit, sx, 0, 32, 32, drawX, drawY, 48, 48);
+    ctx.drawImage(assets.hair, sx, 0, 32, 32, drawX, drawY, 48, 48);
+  }
+
+  function drawFallbackSprite(x, y, color) {
+    fillRect(x + 4, y, 8, 8, "#f8d7b5");
+    fillRect(x + 2, y + 8, 12, 10, color);
+    fillRect(x, y + 18, 6, 8, color);
+    fillRect(x + 10, y + 18, 6, 8, color);
   }
 
   function drawBackground(width, height) {
@@ -272,34 +420,6 @@
       [430, 310, 460, 120]
     ];
     lines.forEach(([x1, y1, x2, y2]) => drawLine(x1, y1, x2, y2, "#1f3858"));
-  }
-
-  function drawPeopleAndProjects() {
-    const visibleProjects = state.activeMemberId
-      ? state.projects.filter((p) => p.ownerId === state.activeMemberId)
-      : state.projects;
-
-    MEMBERS.forEach((member, index) => {
-      const own = visibleProjects.filter((p) => p.ownerId === member.id);
-      const baseZone = ZONES[member.zone] || ZONES.unknown;
-      const wobble = Math.sin((state.tick + index * 8) / 12) * 3;
-      drawSprite(baseZone.x - 12 + wobble, baseZone.y + 26, member.color);
-
-      own.forEach((project, itemIndex) => {
-        const zone = ZONES[project.zone] || ZONES.unknown;
-        const px = zone.x - 36 + (itemIndex % 4) * 24;
-        const py = zone.y - 24 + Math.floor(itemIndex / 4) * 18;
-        fillRect(px, py, 12, 12, member.color);
-        strokeRect(px, py, 12, 12, project.status === "blocked" ? "#fecdd3" : "#07111f");
-      });
-    });
-  }
-
-  function drawSprite(x, y, color) {
-    fillRect(x + 4, y, 8, 8, "#f8d7b5");
-    fillRect(x + 2, y + 8, 12, 10, color);
-    fillRect(x, y + 18, 6, 8, color);
-    fillRect(x + 10, y + 18, 6, 8, color);
   }
 
   function drawPanel(x, y, w, h, color) {
@@ -331,6 +451,15 @@
     ctx.fillStyle = color;
     ctx.font = "24px VT323";
     ctx.fillText(text, x, y);
+  }
+
+  function startPixelAnimation() {
+    if (state.animationFrame) cancelAnimationFrame(state.animationFrame);
+    const tick = () => {
+      drawPixelMap();
+      state.animationFrame = requestAnimationFrame(tick);
+    };
+    state.animationFrame = requestAnimationFrame(tick);
   }
 
   function matchMemberId(owner) {
