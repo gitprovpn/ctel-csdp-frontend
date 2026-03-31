@@ -52,3 +52,9 @@ Frontend tự ánh xạ dữ liệu backend sang mô hình hiển thị:
 - `health_score` -> điểm health để tính summary
 
 Nếu tên `owner` từ backend không khớp với danh sách team hiện tại thì dự án vẫn hiển thị trong list, nhưng trên pixel map theo đúng tọa độ room/zone của housemap gốc sẽ rơi vào nhóm `Other`.
+
+
+## v6
+- Click member card or sprite on pixel map to open assign panel
+- Select existing project, update PIC, stage, status, and note
+- Front-end no longer stores state locally; updates are persisted via backend API

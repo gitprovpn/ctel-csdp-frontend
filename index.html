@@ -74,5 +74,54 @@
 
   <script src="./config.js"></script>
   <script src="./app.js"></script>
+
+  <div id="assignSheet" class="sheet-backdrop hidden" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="assignSheetTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="eyebrow">Quick update</div>
+          <h2 id="assignSheetTitle">Assign project</h2>
+          <p id="assignSheetSubtitle" class="subtle">Chọn dự án, PIC và trạng thái để cập nhật lên backend.</p>
+        </div>
+        <button id="sheetCloseBtn" class="icon-btn" type="button" aria-label="Đóng">✕</button>
+      </div>
+
+      <form id="assignForm" class="sheet-form">
+        <div class="field">
+          <label for="assignMemberName">Nhân sự được chọn</label>
+          <input id="assignMemberName" type="text" readonly />
+        </div>
+
+        <div class="field">
+          <label for="assignProjectSelect">Dự án có sẵn</label>
+          <select id="assignProjectSelect" required></select>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label for="assignStageSelect">Stage / Zone</label>
+            <select id="assignStageSelect" required></select>
+          </div>
+          <div class="field">
+            <label for="assignStatusSelect">Health status</label>
+            <select id="assignStatusSelect" required></select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="assignReasonInput">Ghi chú cập nhật</label>
+          <textarea id="assignReasonInput" rows="3" placeholder="Ví dụ: Đã chuyển sang review sau khi hoàn tất tài liệu presales."></textarea>
+        </div>
+
+        <div class="sheet-actions">
+          <button id="assignSaveBtn" class="btn btn-primary" type="submit">Lưu cập nhật</button>
+          <button id="assignCancelBtn" class="btn btn-secondary" type="button">Hủy</button>
+        </div>
+        <p id="assignFeedback" class="sheet-feedback subtle"></p>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>
