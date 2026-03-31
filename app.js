@@ -5,20 +5,30 @@
   const API_BASE = String(APP_CONFIG.apiBaseUrl || "").replace(/\/$/, "");
 
   const MEMBERS = [
-    { id: "phuc", name: "Phúc", aliases: ["phúc", "phuc"], role: "Lead / Presales", color: "#22d3ee", zone: "presales" },
-    { id: "thanh", name: "Thanh", aliases: ["thanh"], role: "Architecture", color: "#a78bfa", zone: "delivery" },
-    { id: "tuan", name: "Tuấn", aliases: ["tuấn", "tuan"], role: "Delivery", color: "#60a5fa", zone: "delivery" },
-    { id: "phu", name: "Phú", aliases: ["phú", "phu"], role: "Security Review", color: "#f59e0b", zone: "review" },
-    { id: "an", name: "An", aliases: ["an"], role: "Support / Coordination", color: "#34d399", zone: "support" }
+    { id: "phuc", name: "Phúc", aliases: ["phúc", "phuc"], role: "Lead / Presales", color: "#22d3ee", zone: "presales", basePos: { x: 158, y: 350 } },
+    { id: "thanh", name: "Thanh", aliases: ["thanh"], role: "Architecture", color: "#a78bfa", zone: "delivery", basePos: { x: 293, y: 335 } },
+    { id: "tuan", name: "Tuấn", aliases: ["tuấn", "tuan"], role: "Delivery", color: "#60a5fa", zone: "delivery", basePos: { x: 322, y: 382 } },
+    { id: "phu", name: "Phú", aliases: ["phú", "phu"], role: "Security Review", color: "#f59e0b", zone: "review", basePos: { x: 416, y: 331 } },
+    { id: "an", name: "An", aliases: ["an"], role: "Support / Coordination", color: "#34d399", zone: "support", basePos: { x: 562, y: 295 } }
   ];
 
   const ZONES = {
-    presales: { label: "Presales", x: 160, y: 150 },
-    delivery: { label: "Delivery", x: 430, y: 310 },
-    review: { label: "Review", x: 650, y: 170 },
-    meeting: { label: "Meeting", x: 460, y: 120 },
-    support: { label: "Support", x: 760, y: 330 },
-    unknown: { label: "Other", x: 120, y: 360 }
+    presales: { label: "Presales", x: 158, y: 350 },
+    delivery: { label: "Delivery", x: 293, y: 335 },
+    delivery_2: { label: "Delivery", x: 322, y: 382 },
+    meeting: { label: "Meeting", x: 336, y: 176 },
+    review: { label: "Review", x: 416, y: 331 },
+    support: { label: "Support", x: 562, y: 295 },
+    other: { label: "Other", x: 120, y: 354 },
+    intake: { label: "Intake", x: 120, y: 354 },
+    analysis: { label: "Analysis", x: 188, y: 345 },
+    design_review: { label: "Design review", x: 251, y: 330 },
+    approval: { label: "Approval", x: 458, y: 335 },
+    execution: { label: "Execution", x: 383, y: 384 },
+    validation: { label: "Validation", x: 518, y: 379 },
+    handover: { label: "Handover", x: 585, y: 310 },
+    closed: { label: "Closed", x: 606, y: 246 },
+    unknown: { label: "Other", x: 120, y: 354 }
   };
 
   const STATUS_LABELS = {
@@ -56,6 +66,15 @@
     tuan: "linh",
     phu: "nam",
     an: "vy"
+  };
+
+  const LABEL_LAYOUT = {
+    phuc: { dx: -8, dy: -88, w: 120, align: "center" },
+    thanh: { dx: -86, dy: -98, w: 120, align: "right" },
+    tuan: { dx: 84, dy: -82, w: 120, align: "left" },
+    phu: { dx: 0, dy: -92, w: 120, align: "center" },
+    an: { dx: 0, dy: -90, w: 126, align: "center" },
+    unknown: { dx: 0, dy: -88, w: 118, align: "center" }
   };
 
   const state = {
@@ -144,6 +163,7 @@
       reason: raw.health_reason || "",
       dueDate: raw.due_date || null,
       createdAt: raw.created_at || null,
+      updatedAt: raw.updated_at || raw.modified_at || raw.last_updated || null,
       zone
     };
   }
@@ -321,14 +341,14 @@
     ctx.drawImage(skyAsset, 40, 28, 72, 72);
 
     ctx.fillStyle = "rgba(6, 16, 29, 0.80)";
-    ctx.fillRect(18, 18, 270, 44);
+    ctx.fillRect(14, 14, 230, 38);
     ctx.strokeStyle = "rgba(96, 165, 250, 0.28)";
     ctx.lineWidth = 2;
-    ctx.strokeRect(18, 18, 270, 44);
+    ctx.strokeRect(14, 14, 230, 38);
     ctx.fillStyle = "#f3f8ff";
-    ctx.font = "24px VT323";
+    ctx.font = "20px VT323";
     ctx.textAlign = "left";
-    ctx.fillText("SA CTEL PROJECT MAP", 30, 46);
+    ctx.fillText("SA CTEL PROJECT MAP", 24, 38);
 
     drawProjectedMarkers();
   }
@@ -345,13 +365,14 @@
       ? state.projects.filter((p) => p.ownerId === state.activeMemberId)
       : state.projects;
 
+    const labelQueue = [];
+
     MEMBERS.forEach((member, index) => {
       const own = visibleProjects.filter((p) => p.ownerId === member.id);
-      const zone = ZONES[member.zone] || ZONES.unknown;
-      const wobbleX = Math.sin((state.tick + index * 10) / 14) * 4;
-      const wobbleY = Math.cos((state.tick + index * 8) / 18) * 2;
-      const baseX = zone.x + wobbleX;
-      const baseY = zone.y + 30 + wobbleY;
+      const wobbleX = Math.sin((state.tick + index * 10) / 14) * 2;
+      const wobbleY = Math.cos((state.tick + index * 8) / 18) * 1.5;
+      const baseX = member.basePos.x + wobbleX;
+      const baseY = member.basePos.y + wobbleY;
 
       if (state.pixelAssets?.expertImages?.[member.id]) {
         drawCompositeSprite(baseX, baseY, member.id);
@@ -364,18 +385,94 @@
         ctx.strokeStyle = member.color;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(baseX, baseY - 24, 19 + Math.sin(state.tick / 4) * 2, 0, Math.PI * 2);
+        ctx.arc(baseX, baseY - 24, 18 + Math.sin(state.tick / 4) * 2, 0, Math.PI * 2);
         ctx.stroke();
       }
 
       own.forEach((project, itemIndex) => {
-        const markerZone = ZONES[project.zone] || ZONES.unknown;
-        const px = markerZone.x - 38 + (itemIndex % 4) * 22;
-        const py = markerZone.y - 20 + Math.floor(itemIndex / 4) * 16;
-        fillRect(px, py, 12, 12, member.color);
-        strokeRect(px, py, 12, 12, project.status === "blocked" ? "#fecdd3" : "#07111f");
+        const markerZone = ZONES[project.zone] || ZONES[member.zone] || ZONES.unknown;
+        const cols = 3;
+        const offsetX = (itemIndex % cols) * 11;
+        const offsetY = Math.floor(itemIndex / cols) * 11;
+        const px = markerZone.x - 10 + offsetX;
+        const py = markerZone.y - 32 - offsetY;
+        fillRect(px, py, 8, 8, member.color);
+        strokeRect(px, py, 8, 8, project.status === "blocked" ? "#fecdd3" : "#07111f");
       });
+
+      const leadProject = pickLeadProject(own);
+      labelQueue.push({ member, baseX, baseY, project: leadProject, count: own.length });
     });
+
+    labelQueue.forEach((item) => drawMemberLabel(item));
+  }
+
+
+  function drawMemberLabel({ member, baseX, baseY, project, count }) {
+    const layout = LABEL_LAYOUT[member.id] || LABEL_LAYOUT.unknown;
+    const title = member.name;
+    const subtitle = project ? truncateText(project.name, 18) : (count ? `${count} dự án` : "Chưa có dự án");
+    const bubbleWidth = layout.w;
+    const bubbleHeight = 30;
+    const targetX = Math.round(baseX + layout.dx);
+    const targetY = Math.round(baseY + layout.dy);
+    let boxX = Math.round(targetX - bubbleWidth / 2);
+    let boxY = Math.round(targetY - bubbleHeight / 2);
+
+    boxX = clamp(boxX, 8, els.pixelCanvas.width - bubbleWidth - 8);
+    boxY = clamp(boxY, 8, els.pixelCanvas.height - bubbleHeight - 8);
+
+    const anchorX = clamp(baseX, boxX + 10, boxX + bubbleWidth - 10);
+    const anchorY = boxY + bubbleHeight;
+
+    fillRect(boxX, boxY, bubbleWidth, bubbleHeight, "rgba(7,17,31,0.92)");
+    strokeRect(boxX, boxY, bubbleWidth, bubbleHeight, member.color);
+
+    ctx.fillStyle = member.color;
+    ctx.beginPath();
+    ctx.moveTo(anchorX - 5, anchorY - 1);
+    ctx.lineTo(anchorX + 5, anchorY - 1);
+    ctx.lineTo(Math.round(baseX), Math.round(baseY - 28));
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#f8fbff";
+    ctx.font = "12px Inter";
+    ctx.fillText(title, boxX + 8, boxY + 11);
+
+    ctx.fillStyle = "#b9d5ff";
+    ctx.font = "10px Inter";
+    ctx.fillText(subtitle, boxX + 8, boxY + 23);
+  }
+
+  function pickLeadProject(projects) {
+    if (!projects.length) return null;
+    const sorted = [...projects].sort((a, b) => {
+      const aActive = a.status === "done" ? 1 : 0;
+      const bActive = b.status === "done" ? 1 : 0;
+      if (aActive !== bActive) return aActive - bActive;
+      return parseProjectTime(b) - parseProjectTime(a);
+    });
+    return sorted[0];
+  }
+
+  function parseProjectTime(project) {
+    const candidates = [project.updatedAt, project.createdAt, project.dueDate];
+    for (const value of candidates) {
+      const time = Date.parse(value || "");
+      if (Number.isFinite(time)) return time;
+    }
+    return 0;
+  }
+
+  function truncateText(text, max) {
+    const value = String(text || "").trim();
+    return value.length > max ? `${value.slice(0, Math.max(0, max - 1))}…` : value;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   function drawCompositeSprite(x, y, memberId) {
@@ -470,11 +567,18 @@
 
   function mapZone(stage, ownerId) {
     const normalized = normalizeText(stage || "");
-    if (normalized.includes("presale") || normalized.includes("proposal") || normalized.includes("intake")) return "presales";
-    if (normalized.includes("review") || normalized.includes("assessment") || normalized.includes("design")) return "review";
+    if (normalized.includes("presale") || normalized.includes("proposal")) return "presales";
+    if (normalized.includes("intake")) return "intake";
+    if (normalized.includes("analysis")) return "analysis";
+    if (normalized.includes("design")) return "design_review";
+    if (normalized.includes("review") || normalized.includes("assessment")) return "review";
     if (normalized.includes("meeting") || normalized.includes("sync")) return "meeting";
-    if (normalized.includes("support") || normalized.includes("handover")) return "support";
-    if (normalized.includes("delivery") || normalized.includes("implement") || normalized.includes("deploy") || normalized.includes("rollout")) return "delivery";
+    if (normalized.includes("approval")) return "approval";
+    if (normalized.includes("support")) return "support";
+    if (normalized.includes("handover")) return "handover";
+    if (normalized.includes("closed") || normalized.includes("done")) return "closed";
+    if (normalized.includes("delivery") || normalized.includes("implement") || normalized.includes("deploy") || normalized.includes("rollout") || normalized.includes("execution")) return "execution";
+    if (normalized.includes("validat") || normalized.includes("uat") || normalized.includes("test")) return "validation";
     return findMember(ownerId)?.zone || "unknown";
   }
 

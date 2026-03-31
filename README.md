@@ -8,7 +8,7 @@ Giao diện mobile-first để theo dõi nhanh các dự án mà team SA CTEL đ
 - Không dùng `localStorage`
 - Không có dữ liệu demo
 - Không có nút `Nạp demo` và `Xóa dữ liệu`
-- Có pixel map mô phỏng project assignment theo zone và theo từng thành viên
+- Có pixel map theo đúng tọa độ room/zone của housemap gốc mô phỏng project assignment theo zone và theo từng thành viên
 - Có thể lọc nhanh theo từng người trong team
 
 ## API đang dùng
@@ -47,8 +47,8 @@ Ví dụ mở bằng:
 Frontend tự ánh xạ dữ liệu backend sang mô hình hiển thị:
 
 - `owner` -> tên thành viên trong team SA CTEL
-- `stage` -> zone trên pixel map
+- `stage` -> zone trên pixel map theo đúng tọa độ room/zone của housemap gốc
 - `health_status` -> trạng thái hiển thị trên card dự án
 - `health_score` -> điểm health để tính summary
 
-Nếu tên `owner` từ backend không khớp với danh sách team hiện tại thì dự án vẫn hiển thị trong list, nhưng trên pixel map sẽ rơi vào nhóm `Other`.
+Nếu tên `owner` từ backend không khớp với danh sách team hiện tại thì dự án vẫn hiển thị trong list, nhưng trên pixel map theo đúng tọa độ room/zone của housemap gốc sẽ rơi vào nhóm `Other`.
